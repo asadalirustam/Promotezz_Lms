@@ -1,0 +1,258 @@
+const User = require('../models/User');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const Quiz = require('../models/Quiz');
+const QuizResult = require('../models/QuizResult');
+const Attendance = require('../models/Attendance');
+const Resource = require('../models/Resource');
+
+// @desc    Get dashboard statistics for Students
+// @route   GET /api/analytics/student
+// @access  Private (Student)
+const getStudentStats = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Get enrollments
+    const enrollments = await Enrollment.find({ student: studentId }).populate('course');
+    const courseIds = enrollments.map(e => e.course._id);
+
+    // Calculate GPA
+    const gradedEnrollments = enrollments.filter(e => e.gradePoints !== undefined && e.status === 'completed');
+    const gpa = gradedEnrollments.length > 0
+      ? (gradedEnrollments.reduce((acc, curr) => acc + curr.gradePoints, 0) / gradedEnrollments.length).toFixed(2)
+      : '3.50'; // Default mockup GPA for demo if not graded yet
+
+    // Total Assignments
+    const totalAssignments = await Assignment.countDocuments({ course: { $in: courseIds } });
+
+    // Completed Submissions
+    const completedSubmissions = await Submission.countDocuments({ student: studentId });
+
+    // Upcoming assignments (not yet submitted, due in the future)
+    const submittedAssignIds = await Submission.find({ student: studentId }).distinct('assignment');
+    const upcomingAssignments = await Assignment.find({
+      course: { $in: courseIds },
+      _id: { $nin: submittedAssignIds },
+      dueDate: { $gte: new Date() }
+    }).populate('course', 'name code').limit(5);
+
+    // Attendance calculation
+    const attendanceLogs = await Attendance.find({ course: { $in: courseIds } });
+    let totalClasses = 0;
+    let presentCount = 0;
+    let lateCount = 0;
+
+    attendanceLogs.forEach(log => {
+      const record = log.records.find(r => r.student.toString() === studentId);
+      if (record) {
+        totalClasses++;
+        if (record.status === 'present') presentCount++;
+        else if (record.status === 'late') lateCount++;
+      }
+    });
+
+    const attendanceRate = totalClasses > 0
+      ? Math.round(((presentCount + (lateCount * 0.5)) / totalClasses) * 100)
+      : 85; // Default mockup attendance rate if no logs yet
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses: enrollments.length,
+        gpa,
+        totalAssignments,
+        completedSubmissions,
+        attendanceRate,
+        upcomingAssignments
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get dashboard statistics for Teachers
+// @route   GET /api/analytics/teacher
+// @access  Private (Teacher)
+const getTeacherStats = async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    // Courses taught by teacher
+    const courses = await Course.find({ teacher: teacherId });
+    const courseIds = courses.map(c => c._id);
+
+    // Total Students enrolled
+    const studentEnrollments = await Enrollment.countDocuments({ course: { $in: courseIds } });
+
+    // Total Assignments created
+    const assignmentsCreated = await Assignment.countDocuments({ course: { $in: courseIds } });
+
+    // Submissions pending review (status is 'submitted')
+    const pendingSubmissions = await Submission.countDocuments({
+      assignment: { $in: await Assignment.find({ course: { $in: courseIds } }).distinct('_id') },
+      status: 'submitted'
+    });
+
+    // Recent ungraded submissions list
+    const recentSubmissions = await Submission.find({
+      assignment: { $in: await Assignment.find({ course: { $in: courseIds } }).distinct('_id') },
+      status: 'submitted'
+    })
+      .populate('student', 'name email')
+      .populate('assignment', 'title')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses: courses.length,
+        totalStudents: studentEnrollments,
+        totalAssignments: assignmentsCreated,
+        pendingSubmissions,
+        recentSubmissions
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get dashboard statistics for HOD
+// @route   GET /api/analytics/hod
+// @access  Private (HOD)
+const getHODStats = async (req, res) => {
+  try {
+    const totalTeachers = await User.countDocuments({ role: 'teacher' });
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const totalCourses = await Course.countDocuments({});
+
+    // GPA distribution chart data (group students by grade ranges)
+    const enrollments = await Enrollment.find({});
+    let gpaSum = 0;
+    let gpaCount = 0;
+    enrollments.forEach(e => {
+      if (e.gradePoints) {
+        gpaSum += e.gradePoints;
+        gpaCount++;
+      }
+    });
+    const avgGPA = gpaCount > 0 ? (gpaSum / gpaCount).toFixed(2) : '3.40';
+
+    // Department overall attendance rate
+    const logs = await Attendance.find({});
+    let totalRecords = 0;
+    let presentCount = 0;
+    logs.forEach(log => {
+      log.records.forEach(r => {
+        totalRecords++;
+        if (r.status === 'present' || r.status === 'late') {
+          presentCount++;
+        }
+      });
+    });
+    const deptAttendance = totalRecords > 0 ? Math.round((presentCount / totalRecords) * 100) : 92;
+
+    // At-Risk Student identification (attendance < 75% or GPA < 2.5)
+    // We fetch students and query their GPA and attendance
+    const students = await User.find({ role: 'student' }).select('name email semester');
+    const atRiskList = [];
+
+    for (let student of students) {
+      const studentEnroll = await Enrollment.find({ student: student._id });
+      let stdGPASum = 0;
+      let stdGPACount = 0;
+      studentEnroll.forEach(se => {
+        if (se.gradePoints) {
+          stdGPASum += se.gradePoints;
+          stdGPACount++;
+        }
+      });
+      const stdGPA = stdGPACount > 0 ? stdGPASum / stdGPACount : 3.5; // fallback to safe default
+
+      // Attendance
+      const stdLogs = await Attendance.find({ 'records.student': student._id });
+      let stdTotal = 0;
+      let stdPres = 0;
+      stdLogs.forEach(l => {
+        const record = l.records.find(r => r.student.toString() === student._id.toString());
+        if (record) {
+          stdTotal++;
+          if (record.status === 'present') stdPres++;
+        }
+      });
+      const stdAttendance = stdTotal > 0 ? (stdPres / stdTotal) * 100 : 85;
+
+      if (stdGPA < 2.5 || stdAttendance < 75) {
+        atRiskList.push({
+          _id: student._id,
+          name: student.name,
+          email: student.email,
+          semester: student.semester,
+          gpa: stdGPA.toFixed(2),
+          attendance: Math.round(stdAttendance)
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalTeachers,
+        totalStudents,
+        totalCourses,
+        avgGPA,
+        deptAttendance,
+        atRiskStudents: atRiskList.slice(0, 10) // Limit to top 10
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get dashboard statistics for Admin
+// @route   GET /api/analytics/admin
+// @access  Private (Admin)
+const getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({});
+    const studentCount = await User.countDocuments({ role: 'student' });
+    const teacherCount = await User.countDocuments({ role: 'teacher' });
+    const hodCount = await User.countDocuments({ role: 'hod' });
+    const adminCount = await User.countDocuments({ role: 'admin' });
+
+    const totalCourses = await Course.countDocuments({});
+    const totalAssignments = await Assignment.countDocuments({});
+    const totalResources = await Resource.countDocuments({});
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        roles: {
+          student: studentCount,
+          teacher: teacherCount,
+          hod: hodCount,
+          admin: adminCount
+        },
+        totalCourses,
+        totalAssignments,
+        totalResources
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = {
+  getStudentStats,
+  getTeacherStats,
+  getHODStats,
+  getAdminStats
+};
