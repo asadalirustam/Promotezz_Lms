@@ -10,6 +10,9 @@ import Notices from './pages/Notices';
 import Users from './pages/Users';
 import Analytics from './pages/Analytics';
 import QuizInterface from './pages/QuizInterface';
+import Timetable from './pages/Timetable';
+import QuizPaperGenerator from './pages/QuizPaperGenerator';
+import AdminPanel from './pages/AdminPanel';
 
 const App = () => {
   return (
@@ -31,6 +34,9 @@ const App = () => {
           <Route path="notices" element={<Notices />} />
           <Route path="users" element={<Users />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="timetable" element={<Timetable />} />
+          <Route path="generator" element={<QuizPaperGenerator />} />
+          <Route path="admin-panel" element={<AdminPanel />} />
         </Route>
 
         {/* Fallback Redirect */}

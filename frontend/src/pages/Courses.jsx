@@ -20,8 +20,10 @@ const Courses = () => {
     creditHours: 3,
     semester: 5,
     teacher: user?.role === 'teacher' ? user._id : '',
-    category: 'Core'
+    category: 'Core',
+    schedule: []
   });
+  const [tempSchedule, setTempSchedule] = useState({ day: 'Monday', startTime: '09:00 AM', endTime: '10:35 AM', room: 'Room 201' });
   const [submitError, setSubmitError] = useState('');
 
   const fetchCoursesData = async () => {
@@ -94,7 +96,8 @@ const Courses = () => {
           creditHours: 3,
           semester: 5,
           teacher: user?.role === 'teacher' ? user._id : '',
-          category: 'Core'
+          category: 'Core',
+          schedule: []
         });
         fetchCoursesData();
       }
@@ -323,6 +326,99 @@ const Courses = () => {
                     <option value="Elective">Elective</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Configure Timetable Schedule Dynamic Array */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-850 space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Configure Timetable Schedule</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Day</label>
+                    <select
+                      value={tempSchedule.day}
+                      onChange={(e) => setTempSchedule({ ...tempSchedule, day: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500"
+                    >
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Room/Location</label>
+                    <input
+                      type="text"
+                      value={tempSchedule.room}
+                      onChange={(e) => setTempSchedule({ ...tempSchedule, room: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500"
+                      placeholder="e.g. Room 201"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Start Time</label>
+                    <input
+                      type="text"
+                      value={tempSchedule.startTime}
+                      onChange={(e) => setTempSchedule({ ...tempSchedule, startTime: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500"
+                      placeholder="e.g. 09:00 AM"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">End Time</label>
+                    <input
+                      type="text"
+                      value={tempSchedule.endTime}
+                      onChange={(e) => setTempSchedule({ ...tempSchedule, endTime: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500"
+                      placeholder="e.g. 10:30 AM"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-[10px] text-slate-500">
+                    Active Entries: {newCourse.schedule.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!tempSchedule.room.trim()) return;
+                      setNewCourse({
+                        ...newCourse,
+                        schedule: [...newCourse.schedule, { ...tempSchedule }]
+                      });
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 border border-slate-800 text-accent-400 font-semibold text-[10px] uppercase rounded-lg hover:bg-slate-850 cursor-pointer"
+                  >
+                    + Add Day Schedule
+                  </button>
+                </div>
+
+                {newCourse.schedule.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-900">
+                    {newCourse.schedule.map((sch, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                        {sch.day} ({sch.startTime}-{sch.endTime}) @ {sch.room}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewCourse({
+                              ...newCourse,
+                              schedule: newCourse.schedule.filter((_, idx) => idx !== i)
+                            });
+                          }}
+                          className="text-rose-400 hover:text-rose-300 font-bold shrink-0 cursor-pointer"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {user?.role === 'admin' ? (

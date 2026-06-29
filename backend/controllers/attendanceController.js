@@ -75,12 +75,13 @@ const getStudentCourseAttendance = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const logs = await Attendance.find({ course: courseId });
+    const logs = await Attendance.find({ course: courseId }).sort({ date: -1 });
     
     let totalClasses = 0;
     let presentCount = 0;
     let absentCount = 0;
     let lateCount = 0;
+    const detailedLogs = [];
 
     logs.forEach(log => {
       const record = log.records.find(r => r.student.toString() === studentId);
@@ -89,6 +90,11 @@ const getStudentCourseAttendance = async (req, res) => {
         if (record.status === 'present') presentCount++;
         else if (record.status === 'absent') absentCount++;
         else if (record.status === 'late') lateCount++;
+
+        detailedLogs.push({
+          date: log.date,
+          status: record.status
+        });
       }
     });
 
@@ -104,7 +110,8 @@ const getStudentCourseAttendance = async (req, res) => {
         presentCount,
         absentCount,
         lateCount,
-        percentage
+        percentage,
+        logs: detailedLogs
       }
     });
   } catch (error) {

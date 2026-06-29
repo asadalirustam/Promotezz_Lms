@@ -117,7 +117,11 @@ const seedData = async () => {
         creditHours: 4,
         semester: 5,
         teacher: sarah._id,
-        category: 'Core'
+        category: 'Core',
+        schedule: [
+          { day: 'Monday', startTime: '09:00 AM', endTime: '10:30 AM', room: 'Room 201' },
+          { day: 'Wednesday', startTime: '09:00 AM', endTime: '10:30 AM', room: 'Room 201' }
+        ]
       },
       {
         name: 'Natural Language Processing',
@@ -126,7 +130,11 @@ const seedData = async () => {
         creditHours: 3,
         semester: 5,
         teacher: david._id,
-        category: 'Core'
+        category: 'Core',
+        schedule: [
+          { day: 'Tuesday', startTime: '11:00 AM', endTime: '12:30 PM', room: 'Room 202' },
+          { day: 'Thursday', startTime: '11:00 AM', endTime: '12:30 PM', room: 'Room 202' }
+        ]
       },
       {
         name: 'Deep Learning',
@@ -135,7 +143,11 @@ const seedData = async () => {
         creditHours: 4,
         semester: 6,
         teacher: sarah._id,
-        category: 'Core'
+        category: 'Core',
+        schedule: [
+          { day: 'Monday', startTime: '02:00 PM', endTime: '03:30 PM', room: 'AI Lab 1' },
+          { day: 'Wednesday', startTime: '02:00 PM', endTime: '03:30 PM', room: 'AI Lab 1' }
+        ]
       },
       {
         name: 'Computer Vision',
@@ -144,7 +156,11 @@ const seedData = async () => {
         creditHours: 3,
         semester: 6,
         teacher: david._id,
-        category: 'Elective'
+        category: 'Elective',
+        schedule: [
+          { day: 'Tuesday', startTime: '09:00 AM', endTime: '10:30 AM', room: 'AI Lab 2' },
+          { day: 'Thursday', startTime: '09:00 AM', endTime: '10:30 AM', room: 'AI Lab 2' }
+        ]
       },
       {
         name: 'Generative AI',
@@ -153,7 +169,10 @@ const seedData = async () => {
         creditHours: 3,
         semester: 7,
         teacher: sarah._id,
-        category: 'Elective'
+        category: 'Elective',
+        schedule: [
+          { day: 'Friday', startTime: '02:00 PM', endTime: '04:30 PM', room: 'AI Lab 3' }
+        ]
       }
     ];
 

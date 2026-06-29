@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { Calendar } from 'lucide-react';
+import { Calendar, Sparkles } from 'lucide-react';
 
 const Navbar = () => {
   const { user } = useSelector((state) => state.auth);
@@ -11,19 +11,51 @@ const Navbar = () => {
   };
 
   return (
-    <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-8">
-      {/* Page Title Context */}
+    <header
+      className="h-16 flex items-center justify-between px-8"
+      style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E2E8F0',
+        boxShadow: '0 1px 8px rgba(37,99,235,0.06)'
+      }}
+    >
+      {/* Page Title */}
       <div>
-        <h2 className="text-lg font-bold text-white tracking-wide">
-          Welcome back, <span className="text-accent-400 font-semibold">{user?.name || 'User'}</span>
+        <h2 className="text-base font-bold tracking-wide" style={{ color: '#0F172A' }}>
+          Welcome back,{' '}
+          <span className="font-extrabold" style={{ color: '#2563EB' }}>
+            {user?.name || 'User'}
+          </span>
         </h2>
-        <p className="text-[11px] text-slate-400">AI Department LMS Platform</p>
+        <p className="text-[10px] font-medium flex items-center gap-1 mt-0.5" style={{ color: '#64748B' }}>
+          <Sparkles className="w-3 h-3" style={{ color: '#7C3AED' }} />
+          AI Department Learning Management System
+        </p>
       </div>
 
-      {/* Date Widget */}
-      <div className="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-lg border border-slate-800 text-slate-400 text-xs">
-        <Calendar className="w-4 h-4 text-accent-500" />
-        <span>{formatDate()}</span>
+      {/* Date + Status */}
+      <div className="flex items-center gap-3">
+        {/* Live indicator */}
+        <div className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: '#10B981' }}>
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ background: '#10B981', boxShadow: '0 0 6px #10B981' }}
+          />
+          System Online
+        </div>
+
+        {/* Date pill */}
+        <div
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
+          style={{
+            background: '#EFF6FF',
+            border: '1px solid #BFDBFE',
+            color: '#2563EB'
+          }}
+        >
+          <Calendar className="w-3.5 h-3.5" style={{ color: '#2563EB' }} />
+          <span>{formatDate()}</span>
+        </div>
       </div>
     </header>
   );

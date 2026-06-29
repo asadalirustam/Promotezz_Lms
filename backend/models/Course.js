@@ -39,7 +39,13 @@ const CourseSchema = new mongoose.Schema({
     type: String,
     enum: ['Core', 'Elective'],
     required: [true, 'Course category is required']
-  }
+  },
+  schedule: [{
+    day: { type: String, required: true },
+    startTime: { type: String, required: true },
+    endTime: { type: String, required: true },
+    room: { type: String, required: true }
+  }]
 }, {
   timestamps: true
 });

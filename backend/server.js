@@ -22,7 +22,7 @@ app.use(helmet({
 app.use(cors({
   origin: '*', // For development flexibility; restrict in production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-gemini-key', 'x-openai-key']
 }));
 
 // Request Logger
@@ -45,6 +45,7 @@ app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/generator', require('./routes/generatorRoutes'));
 
 // Root route checking server status
 app.get('/', (req, res) => {
@@ -66,3 +67,5 @@ process.on('unhandledRejection', (err, promise) => {
   // Close server & exit process
   server.close(() => process.exit(1));
 });
+
+// Trigger reload

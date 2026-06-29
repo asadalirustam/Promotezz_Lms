@@ -7,7 +7,7 @@ const User = require('../models/User');
 // @access  Private (Admin/Teacher/HOD)
 const createCourse = async (req, res) => {
   try {
-    const { name, code, description, creditHours, semester, teacher, category } = req.body;
+    const { name, code, description, creditHours, semester, teacher, category, schedule } = req.body;
 
     if (!name || !code || !creditHours || !semester || !teacher || !category) {
       return res.status(400).json({ success: false, message: 'Please provide all required fields' });
@@ -32,7 +32,8 @@ const createCourse = async (req, res) => {
       creditHours,
       semester,
       teacher,
-      category
+      category,
+      schedule
     });
 
     res.status(201).json({ success: true, data: course });
@@ -204,6 +205,133 @@ const getCourseStudents = async (req, res) => {
   }
 };
 
+// @desc    Get gradebook list for a course
+// @route   GET /api/courses/:id/gradebook
+// @access  Private (Teacher/HOD/Admin)
+const getCourseGradebook = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    // Auth verification
+    if (req.user.role === 'teacher' && course.teacher.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this gradebook' });
+    }
+
+    const gradebook = await Enrollment.find({ course: req.params.id })
+      .populate('student', 'name email semester department')
+      .sort({ createdAt: 1 });
+
+    res.status(200).json({ success: true, count: gradebook.length, data: gradebook });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update sessional marks & grade for a student
+// @route   PUT /api/courses/:id/gradebook/:enrollmentId
+// @access  Private (Teacher/HOD/Admin)
+const updateStudentGrades = async (req, res) => {
+  try {
+    const { 
+      midtermMarks, 
+      finalMarks, 
+      sessionalMarks, 
+      assignmentMarks, 
+      quizMarks, 
+      grade, 
+      status 
+    } = req.body;
+
+    const enrollment = await Enrollment.findById(req.params.enrollmentId).populate('course');
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: 'Enrollment record not found' });
+    }
+
+    // Verify teacher authorization
+    if (req.user.role === 'teacher' && enrollment.course.teacher.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify grades for this course' });
+    }
+
+    // Save numeric updates
+    enrollment.midtermMarks = Number(midtermMarks) || 0;
+    enrollment.finalMarks = Number(finalMarks) || 0;
+    enrollment.sessionalMarks = Number(sessionalMarks) || 0;
+    enrollment.assignmentMarks = Number(assignmentMarks) || 0;
+    enrollment.quizMarks = Number(quizMarks) || 0;
+    
+    // Auto-calculate totalMarks
+    enrollment.totalMarks = 
+      enrollment.midtermMarks + 
+      enrollment.finalMarks + 
+      enrollment.sessionalMarks + 
+      enrollment.assignmentMarks + 
+      enrollment.quizMarks;
+
+    // Determine or assign grades based on score scale
+    if (grade) {
+      enrollment.grade = grade;
+    } else {
+      // Auto-assign letter grades out of 100
+      const total = enrollment.totalMarks;
+      if (total >= 85) enrollment.grade = 'A';
+      else if (total >= 80) enrollment.grade = 'A-';
+      else if (total >= 75) enrollment.grade = 'B+';
+      else if (total >= 70) enrollment.grade = 'B';
+      else if (total >= 65) enrollment.grade = 'B-';
+      else if (total >= 60) enrollment.grade = 'C+';
+      else if (total >= 55) enrollment.grade = 'C';
+      else if (total >= 50) enrollment.grade = 'D';
+      else enrollment.grade = 'F';
+    }
+
+    // Set GPA grade points corresponding to letter grades
+    const gpaScale = {
+      'A': 4.0, 'A-': 3.7,
+      'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+      'C+': 2.3, 'C': 2.0,
+      'D': 1.0, 'F': 0.0, 'N/A': 0.0
+    };
+    enrollment.gradePoints = gpaScale[enrollment.grade] || 0.0;
+
+    if (status) {
+      enrollment.status = status;
+    }
+
+    await enrollment.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Student marks and grades successfully updated!', 
+      data: enrollment 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get student's own enrollment record for a specific course
+// @route   GET /api/courses/:id/enrollment/me
+// @access  Private (Student)
+const getMyCourseEnrollment = async (req, res) => {
+  try {
+    const enrollment = await Enrollment.findOne({
+      student: req.user.id,
+      course: req.params.id
+    }).populate('course', 'name code creditHours');
+
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: 'Enrollment record not found for this course' });
+    }
+
+    res.status(200).json({ success: true, data: enrollment });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createCourse,
   getCourses,
@@ -212,5 +340,8 @@ module.exports = {
   deleteCourse,
   enrollInCourse,
   getMyEnrolledCourses,
-  getCourseStudents
+  getCourseStudents,
+  getCourseGradebook,
+  updateStudentGrades,
+  getMyCourseEnrollment
 };

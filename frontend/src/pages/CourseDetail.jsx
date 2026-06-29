@@ -15,7 +15,11 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Clock,
+  MapPin,
+  Eye,
+  X
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -68,12 +72,37 @@ const CourseDetail = () => {
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState({}); // { [studentId]: 'present'|'absent'|'late' }
 
+  // Timetable Schedule states
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [courseScheduleList, setCourseScheduleList] = useState([]);
+  const [editTempSchedule, setEditTempSchedule] = useState({ day: 'Monday', startTime: '09:00 AM', endTime: '10:30 AM', room: 'Room 201' });
+
+  // Exam Papers states
+  const [examPapers, setExamPapers] = useState([]);
+  const [viewingPaper, setViewingPaper] = useState(null); // Paper object being viewed by student
+
+  // Sessional & Gradebook states
+  const [gradebookList, setGradebookList] = useState([]);
+  const [myEnrollment, setMyEnrollment] = useState(null);
+  const [showGradeModal, setShowGradeModal] = useState(false);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [editGrades, setEditGrades] = useState({
+    midtermMarks: 0,
+    finalMarks: 0,
+    sessionalMarks: 0,
+    assignmentMarks: 0,
+    quizMarks: 0,
+    grade: '',
+    status: 'active'
+  });
+
   const fetchCourseDetails = async () => {
     try {
       setLoading(true);
       const res = await api.get(`/courses/${id}`);
       if (res.data.success) {
         setCourse(res.data.data);
+        setCourseScheduleList(res.data.data.schedule || []);
       }
 
       // Load specific tab data
@@ -129,6 +158,17 @@ const CourseDetail = () => {
             records[std._id] = 'present';
           });
           setAttendanceRecords(records);
+        }
+      } else if (tab === 'exams') {
+        const res = await api.get(`/generator/papers/course/${id}`);
+        setExamPapers(res.data.data);
+      } else if (tab === 'gradesheet') {
+        if (user?.role === 'student') {
+          const res = await api.get(`/courses/${id}/enrollment/me`);
+          setMyEnrollment(res.data.data);
+        } else {
+          const res = await api.get(`/courses/${id}/gradebook`);
+          setGradebookList(res.data.data);
         }
       }
     } catch (err) {
@@ -347,6 +387,48 @@ const CourseDetail = () => {
     }
   };
 
+  // --- TIMETABLE SCHEDULE HANDLERS ---
+  const handleAddScheduleSlot = () => {
+    if (!editTempSchedule.room.trim()) return;
+    setCourseScheduleList([...courseScheduleList, { ...editTempSchedule }]);
+  };
+
+  const handleRemoveScheduleSlot = (index) => {
+    setCourseScheduleList(courseScheduleList.filter((_, idx) => idx !== index));
+  };
+
+  const handleSaveSchedule = async () => {
+    try {
+      const res = await api.put(`/courses/${id}`, {
+        schedule: courseScheduleList
+      });
+      if (res.data.success) {
+        setCourse(res.data.data);
+        setIsEditingSchedule(false);
+        alert('Course lecture timetable updated successfully!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update schedule');
+    }
+  };
+  const handleGradebookSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedEnrollment) return;
+
+    try {
+      const res = await api.put(`/courses/${id}/gradebook/${selectedEnrollment._id}`, editGrades);
+      if (res.data.success) {
+        alert('Student marks and grades successfully updated!');
+        setShowGradeModal(false);
+        // Reload gradebook
+        const reloadRes = await api.get(`/courses/${id}/gradebook`);
+        setGradebookList(reloadRes.data.data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save student grades');
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -373,16 +455,43 @@ const CourseDetail = () => {
             <span>Coordinator: {course?.teacher?.name}</span>
           </p>
           <p className="text-xs text-slate-400 leading-relaxed max-w-3xl pt-2">{course?.description}</p>
+          
+          {course?.schedule && course.schedule.length > 0 && (
+            <div className="pt-4 border-t border-slate-800/40 mt-4 space-y-2">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-accent-500" />
+                Lecture Timetable & room schedule
+              </h4>
+              <div className="flex flex-wrap gap-3">
+                {course.schedule.map((sched, index) => (
+                  <div key={index} className="bg-slate-950/60 border border-slate-800/80 px-3.5 py-2 rounded-xl text-xs space-y-1">
+                    <p className="font-bold text-white flex items-center gap-1">
+                      <span className="text-accent-400">{sched.day}</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {sched.startTime} - {sched.endTime}
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">
+                      Location: {sched.room}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Tabs Row */}
-      <div className="flex border-b border-slate-800 gap-6">
+      <div className="flex border-b border-slate-800 gap-6 overflow-x-auto">
         {[
           { id: 'resources', label: 'Resources Library', icon: BookOpen },
           { id: 'assignments', label: 'Assignments', icon: FileText },
           { id: 'quizzes', label: 'MCQ Quizzes', icon: HelpCircle },
-          { id: 'attendance', label: 'Attendance', icon: CheckSquare }
+          { id: 'attendance', label: 'Attendance', icon: CheckSquare },
+          { id: 'timetable', label: 'Timetable', icon: Calendar },
+          { id: 'exams', label: 'Exam Papers', icon: FileText },
+          { id: 'gradesheet', label: 'Sessional & Gradesheet', icon: Award }
         ].map((t) => {
           const TabIcon = t.icon;
           return (
@@ -719,24 +828,72 @@ const CourseDetail = () => {
 
           {/* Student View */}
           {user?.role === 'student' && myAttendance && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Attendance Rate</p>
-                <h2 className={`text-4xl font-extrabold mt-2 ${myAttendance.percentage >= 75 ? 'text-emerald-400 text-glow' : 'text-rose-400'}`}>
-                  {myAttendance.percentage}%
-                </h2>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Attendance Rate</p>
+                  <h2 className={`text-4xl font-extrabold mt-2 ${myAttendance.percentage >= 75 ? 'text-emerald-400 text-glow' : 'text-rose-400'}`}>
+                    {myAttendance.percentage}%
+                  </h2>
+                </div>
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Present</p>
+                  <h2 className="text-3xl font-extrabold text-white mt-2">{myAttendance.presentCount}</h2>
+                </div>
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Late</p>
+                  <h2 className="text-3xl font-extrabold text-amber-400 mt-2">{myAttendance.lateCount}</h2>
+                </div>
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Absent</p>
+                  <h2 className="text-3xl font-extrabold text-rose-450 mt-2">{myAttendance.absentCount}</h2>
+                </div>
               </div>
-              <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Present</p>
-                <h2 className="text-3xl font-extrabold text-white mt-2">{myAttendance.presentCount}</h2>
-              </div>
-              <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Late</p>
-                <h2 className="text-3xl font-extrabold text-amber-400 mt-2">{myAttendance.lateCount}</h2>
-              </div>
-              <div className="glass-panel p-6 rounded-2xl border border-slate-800 text-center">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Classes Absent</p>
-                <h2 className="text-3xl font-extrabold text-rose-450 mt-2">{myAttendance.absentCount}</h2>
+
+              {/* Detailed Session Logs Table */}
+              <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                <h4 className="font-bold text-white text-sm uppercase tracking-wider">Session-by-Session Lecture Logs</h4>
+                {myAttendance.logs && myAttendance.logs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/10">
+                          <th className="p-3 font-semibold">Session Date</th>
+                          <th className="p-3 font-semibold">Lecture Time</th>
+                          <th className="p-3 font-semibold text-right">My Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40">
+                        {myAttendance.logs.map((log, index) => {
+                          const dateObj = new Date(log.date);
+                          return (
+                            <tr key={index} className="text-slate-300 hover:bg-slate-900/10 transition-all">
+                              <td className="p-3 font-semibold text-white">
+                                {dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
+                              </td>
+                              <td className="p-3 text-xs text-slate-500">
+                                {dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="p-3 text-right">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                  log.status === 'present'
+                                    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                                    : log.status === 'absent'
+                                    ? 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+                                    : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                                }`}>
+                                  {log.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-6">No individual lecture logs found for this course.</p>
+                )}
               </div>
             </div>
           )}
@@ -820,6 +977,599 @@ const CourseDetail = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 5: TIMETABLE */}
+      {activeTab === 'timetable' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg">Lecture Timetable</h3>
+              <p className="text-xs text-slate-400">Scheduled days, timings, and classrooms for this course.</p>
+            </div>
+            {user?.role !== 'student' && (
+              <button
+                onClick={() => setIsEditingSchedule(!isEditingSchedule)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-accent-400 font-semibold text-xs rounded-lg transition-all cursor-pointer"
+              >
+                {isEditingSchedule ? 'View Schedule' : 'Manage Schedule'}
+              </button>
+            )}
+          </div>
+
+          {/* Edit schedule mode (Teacher / Admin / HOD) */}
+          {isEditingSchedule && user?.role !== 'student' ? (
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-850 space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Configure Slots</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Day</label>
+                    <select
+                      value={editTempSchedule.day}
+                      onChange={(e) => setEditTempSchedule({ ...editTempSchedule, day: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    >
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Room/Location</label>
+                    <input
+                      type="text"
+                      value={editTempSchedule.room}
+                      onChange={(e) => setEditTempSchedule({ ...editTempSchedule, room: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                      placeholder="e.g. Room 201"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">Start Time</label>
+                    <input
+                      type="text"
+                      value={editTempSchedule.startTime}
+                      onChange={(e) => setEditTempSchedule({ ...editTempSchedule, startTime: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                      placeholder="e.g. 09:00 AM"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-slate-500 mb-1 uppercase">End Time</label>
+                    <input
+                      type="text"
+                      value={editTempSchedule.endTime}
+                      onChange={(e) => setEditTempSchedule({ ...editTempSchedule, endTime: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                      placeholder="e.g. 10:30 AM"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddScheduleSlot}
+                    className="px-3 py-1 bg-slate-900 border border-slate-800 text-accent-400 font-semibold text-[10px] uppercase rounded-lg hover:bg-slate-850 cursor-pointer"
+                  >
+                    + Add Slot
+                  </button>
+                </div>
+              </div>
+
+              {/* Slots List */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Scheduled Slots</h4>
+                {courseScheduleList.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {courseScheduleList.map((slot, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-850">
+                        <div className="space-y-1">
+                          <p className="font-bold text-white text-sm">{slot.day}</p>
+                          <p className="text-xs text-slate-400">{slot.startTime} - {slot.endTime}</p>
+                          <p className="text-[10px] text-slate-500 font-semibold uppercase">Room: {slot.room}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveScheduleSlot(index)}
+                          className="p-1.5 text-rose-450 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all font-bold cursor-pointer"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 py-2">No slots configured. Course will not show on timetables.</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-800/60">
+                <button
+                  onClick={handleSaveSchedule}
+                  className="px-5 py-2.5 bg-gradient-to-r from-accent-600 to-indigo-600 hover:from-accent-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Save Schedule Changes
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* View Mode */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {course?.schedule && course.schedule.length > 0 ? (
+                course.schedule.map((sched, index) => (
+                  <div key={index} className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-start gap-4 hover:border-slate-700 transition-all glow-card-accent">
+                    <div className="p-3 bg-accent-600/10 text-accent-400 rounded-xl">
+                      <Calendar className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-bold text-base text-white">{sched.day}</h4>
+                      <p className="text-sm text-slate-350 flex items-center gap-1.5 font-medium">
+                        <Clock className="w-4 h-4 text-slate-500" />
+                        {sched.startTime} - {sched.endTime}
+                      </p>
+                      <p className="text-xs text-slate-400 flex items-center gap-1.5 font-semibold">
+                        <MapPin className="w-4 h-4 text-slate-500" />
+                        Location: {sched.room}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-8 text-center text-slate-500 text-sm">
+                  No lecture timetable slots scheduled for this course.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 6: EXAM PAPERS */}
+      {activeTab === 'exams' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg">Course Exam Papers</h3>
+              <p className="text-xs text-slate-400 font-medium">AI-generated Midterm, Final, and Quiz papers approved by department faculty.</p>
+            </div>
+            {(user?.role === 'teacher' || user?.role === 'admin' || user?.role === 'hod') && (
+              <Link
+                to="/generator"
+                className="px-3.5 py-2 bg-gradient-to-r from-accent-600 to-indigo-600 hover:from-accent-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-accent-500/5 flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>AI Generator Wizard</span>
+              </Link>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {examPapers.length > 0 ? (
+              examPapers.map((paper) => (
+                <div key={paper._id} className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all glow-card-accent">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded border ${
+                        paper.paperType === 'Final'
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                          : paper.paperType === 'Midterm'
+                          ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                          : 'bg-accent-500/10 border-accent-500/20 text-accent-400'
+                      }`}>
+                        {paper.paperType}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-950 px-2 py-0.5 rounded border border-slate-850">
+                        Marks: {paper.totalMarks}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-base text-white">{paper.title}</h4>
+                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                        <span>Source: {paper.pdfName}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-medium">
+                        Difficulty: <span className="capitalize font-semibold text-slate-400">{paper.difficulty}</span> &bull; By: {paper.teacher?.name || 'Faculty'}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {paper.questions?.length || 0} questions
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-slate-800/60 pt-4 mt-6">
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(paper.createdAt).toLocaleDateString()}
+                    </span>
+                    
+                    <div className="flex items-center gap-2">
+                      {user?.role !== 'student' && (
+                        <button
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this exam paper?')) {
+                              try {
+                                const deleteRes = await api.delete(`/generator/papers/${paper._id}`);
+                                if (deleteRes.data.success) {
+                                  alert('Exam paper removed successfully.');
+                                  const res = await api.get(`/generator/papers/course/${id}`);
+                                  setExamPapers(res.data.data);
+                                }
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to delete paper');
+                              }
+                            }
+                          }}
+                          className="px-2 py-1.5 bg-slate-950 border border-slate-850 hover:border-rose-900/40 text-rose-450 hover:text-rose-400 text-xs font-bold rounded-lg cursor-pointer transition-all"
+                        >
+                          Delete
+                        </button>
+                      )}
+
+                      {/* View Paper button — shows questions inline for students */}
+                      <button
+                        onClick={() => setViewingPaper(paper)}
+                        className="px-3 py-1.5 bg-accent-600/15 hover:bg-accent-600/25 border border-accent-500/20 text-accent-400 hover:text-accent-300 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Paper</span>
+                      </button>
+                      
+                      <button
+                        onClick={async () => {
+                          try {
+                            const exportRes = await api.post('/generator/export-pdf', {
+                              title: paper.title,
+                              courseCode: course?.code,
+                              courseName: course?.name,
+                              paperType: paper.paperType,
+                              totalMarks: paper.totalMarks,
+                              questions: paper.questions
+                            }, {
+                              responseType: 'blob'
+                            });
+                            
+                            const fileUrl = window.URL.createObjectURL(new Blob([exportRes.data]));
+                            const fileLink = document.createElement('a');
+                            fileLink.href = fileUrl;
+                            fileLink.setAttribute('download', `${paper.paperType.toLowerCase()}_exam.pdf`);
+                            document.body.appendChild(fileLink);
+                            fileLink.click();
+                            fileLink.remove();
+                          } catch (err) {
+                            console.error('Failed to download exam PDF', err);
+                            alert('Failed to download PDF document');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-accent-600 hover:bg-accent-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-8 text-center text-slate-500 text-sm glass-panel border border-slate-800 rounded-2xl">
+                No archived exam papers found for this course.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: SESSIONAL & GRADESHEET */}
+      {activeTab === 'gradesheet' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg">Course Sessional & Gradesheet</h3>
+              <p className="text-xs text-slate-400 font-medium">
+                {user?.role === 'student' 
+                  ? 'Your verified marksheet and sessional grades for this course.'
+                  : 'Manage and update sessional scores, midterms, final exam grades, and course statuses.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Student Portal Grade Card View */}
+          {user?.role === 'student' && myEnrollment && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Detailed Breakdown */}
+              <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
+                <h4 className="font-bold text-white text-sm uppercase tracking-wider">Marksheet Split Breakdown</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-medium">Assignment Marks</span>
+                    <span className="text-sm font-bold text-white">{myEnrollment.assignmentMarks || 0}</span>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-medium">Quiz Assessments</span>
+                    <span className="text-sm font-bold text-white">{myEnrollment.quizMarks || 0}</span>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-medium">Midterm Exam</span>
+                    <span className="text-sm font-bold text-white">{myEnrollment.midtermMarks || 0}</span>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-medium">Final Exam</span>
+                    <span className="text-sm font-bold text-white">{myEnrollment.finalMarks || 0}</span>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="text-xs text-slate-400 font-medium">Class Sessional Activities</span>
+                    <span className="text-sm font-bold text-white">{myEnrollment.sessionalMarks || 0}</span>
+                  </div>
+                  <div className="bg-accent-600/10 p-4 rounded-xl border border-accent-500/20 flex justify-between items-center">
+                    <span className="text-xs text-accent-400 font-bold">Total Aggregated Score</span>
+                    <span className="text-sm font-extrabold text-white">{myEnrollment.totalMarks || 0} / 100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Grade Card */}
+              <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6 text-center self-start bg-gradient-to-br from-slate-900 to-accent-950/20">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Final Course Outcome</h4>
+                <div className="py-6 space-y-2">
+                  <div className="text-6xl font-extrabold text-glow text-accent-400">
+                    {myEnrollment.grade || 'N/A'}
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium">Grade Point: {myEnrollment.gradePoints?.toFixed(2) || '0.00'} / 4.00</p>
+                </div>
+                <div className="border-t border-slate-800/60 pt-4 text-xs flex justify-between">
+                  <span className="text-slate-500">Status</span>
+                  <span className={`capitalize font-bold ${
+                    myEnrollment.status === 'completed'
+                      ? 'text-emerald-400'
+                      : myEnrollment.status === 'dropped'
+                      ? 'text-rose-400'
+                      : 'text-accent-400'
+                  }`}>{myEnrollment.status}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Teacher Gradebook Table View */}
+          {user?.role !== 'student' && (
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
+              <h4 className="font-bold text-white text-base">Student Marksheet Roster</h4>
+              
+              {gradebookList.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                        <th className="pb-3 pl-2">Student</th>
+                        <th className="pb-3 text-center">Quizzes</th>
+                        <th className="pb-3 text-center">Assignments</th>
+                        <th className="pb-3 text-center">Midterm</th>
+                        <th className="pb-3 text-center">Final</th>
+                        <th className="pb-3 text-center">Sessional</th>
+                        <th className="pb-3 text-center font-bold text-white">Total (/100)</th>
+                        <th className="pb-3 text-center font-bold text-accent-400">Grade</th>
+                        <th className="pb-3 text-center">Status</th>
+                        <th className="pb-3 text-right pr-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/40">
+                      {gradebookList.map((enroll) => (
+                        <tr key={enroll._id} className="text-slate-350 hover:bg-slate-900/10 transition-all">
+                          <td className="py-4 pl-2">
+                            <div className="font-semibold text-white">{enroll.student?.name}</div>
+                            <div className="text-[10px] text-slate-500">{enroll.student?.email}</div>
+                          </td>
+                          <td className="py-4 text-center">{enroll.quizMarks || 0}</td>
+                          <td className="py-4 text-center">{enroll.assignmentMarks || 0}</td>
+                          <td className="py-4 text-center">{enroll.midtermMarks || 0}</td>
+                          <td className="py-4 text-center">{enroll.finalMarks || 0}</td>
+                          <td className="py-4 text-center">{enroll.sessionalMarks || 0}</td>
+                          <td className="py-4 text-center font-bold text-white text-sm">{enroll.totalMarks || 0}</td>
+                          <td className="py-4 text-center">
+                            <span className="px-2 py-0.5 rounded bg-accent-600/15 border border-accent-500/25 text-accent-400 font-extrabold text-xs">
+                              {enroll.grade || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="py-4 text-center">
+                            <span className={`capitalize text-[10px] font-bold ${
+                              enroll.status === 'completed' 
+                                ? 'text-emerald-400' 
+                                : enroll.status === 'dropped' 
+                                ? 'text-rose-450' 
+                                : 'text-accent-400'
+                            }`}>
+                              {enroll.status}
+                            </span>
+                          </td>
+                          <td className="py-4 text-right pr-2">
+                            <button
+                              onClick={() => {
+                                setSelectedEnrollment(enroll);
+                                setEditGrades({
+                                  midtermMarks: enroll.midtermMarks || 0,
+                                  finalMarks: enroll.finalMarks || 0,
+                                  sessionalMarks: enroll.sessionalMarks || 0,
+                                  assignmentMarks: enroll.assignmentMarks || 0,
+                                  quizMarks: enroll.quizMarks || 0,
+                                  grade: enroll.grade || '',
+                                  status: enroll.status || 'active'
+                                });
+                                setShowGradeModal(true);
+                              }}
+                              className="px-2.5 py-1 bg-slate-950 border border-slate-850 hover:border-slate-700 text-slate-350 hover:text-white text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                            >
+                              Enter Grades
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm text-center py-6">No enrolled students in this course yet.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GRADEBOOK EDITOR MODAL */}
+      {showGradeModal && selectedEnrollment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-bold text-white">Record Sessional Grades</h3>
+                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Student: {selectedEnrollment.student?.name}</p>
+              </div>
+              <button 
+                onClick={() => setShowGradeModal(false)}
+                className="text-slate-400 hover:text-white transition-all cursor-pointer font-bold text-xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleGradebookSubmit}>
+              <div className="p-6 space-y-4 max-h-[400px] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Quizzes */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Quiz Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editGrades.quizMarks}
+                      onChange={(e) => setEditGrades({ ...editGrades, quizMarks: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    />
+                  </div>
+
+                  {/* Assignments */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Assignment Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editGrades.assignmentMarks}
+                      onChange={(e) => setEditGrades({ ...editGrades, assignmentMarks: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    />
+                  </div>
+
+                  {/* Midterm */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Midterm Exam Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editGrades.midtermMarks}
+                      onChange={(e) => setEditGrades({ ...editGrades, midtermMarks: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    />
+                  </div>
+
+                  {/* Final */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Final Exam Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editGrades.finalMarks}
+                      onChange={(e) => setEditGrades({ ...editGrades, finalMarks: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    />
+                  </div>
+
+                  {/* Sessional */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Sessional Activities Marks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editGrades.sessionalMarks}
+                      onChange={(e) => setEditGrades({ ...editGrades, sessionalMarks: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                    />
+                  </div>
+
+                  {/* Total Score Display */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Accumulated Total</label>
+                    <div className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white font-extrabold">
+                      {(Number(editGrades.quizMarks) || 0) + 
+                       (Number(editGrades.assignmentMarks) || 0) + 
+                       (Number(editGrades.midtermMarks) || 0) + 
+                       (Number(editGrades.finalMarks) || 0) + 
+                       (Number(editGrades.sessionalMarks) || 0)} / 100
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Status */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Status</label>
+                    <select
+                      value={editGrades.status}
+                      onChange={(e) => setEditGrades({ ...editGrades, status: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-accent-500"
+                    >
+                      <option value="active">Active</option>
+                      <option value="dropped">Dropped</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+
+                  {/* Letter Grade Override */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase">Overall Grade Override</label>
+                    <select
+                      value={editGrades.grade}
+                      onChange={(e) => setEditGrades({ ...editGrades, grade: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-accent-500"
+                    >
+                      <option value="">Auto Calculate Grade</option>
+                      <option value="A">A (Excellent)</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B">B (Good)</option>
+                      <option value="B-">B-</option>
+                      <option value="C+">C+</option>
+                      <option value="C">C (Satisfactory)</option>
+                      <option value="D">D (Pass)</option>
+                      <option value="F">F (Fail)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 p-6 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowGradeModal(false)}
+                  className="px-4 py-2 bg-slate-850 hover:bg-slate-800 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-accent-600 to-indigo-600 hover:from-accent-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl cursor-pointer"
+                >
+                  Save Grades
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -1147,15 +1897,140 @@ const CourseDetail = () => {
           </div>
         </div>
       )}
+      {/* EXAM PAPER VIEWER MODAL */}
+      {viewingPaper && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-3xl shadow-2xl my-8 relative overflow-hidden">
+            {/* Decorative gradient top bar */}
+            <div className="h-1 w-full bg-gradient-to-r from-accent-600 via-indigo-500 to-accent-400" />
+
+            {/* Header */}
+            <div className="p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded border ${
+                    viewingPaper.paperType === 'Final'
+                      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                      : viewingPaper.paperType === 'Midterm'
+                      ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                      : 'bg-accent-500/10 border-accent-500/20 text-accent-400'
+                  }`}>
+                    {viewingPaper.paperType} Examination
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border bg-slate-800 border-slate-700 text-slate-400 capitalize">
+                    {viewingPaper.difficulty}
+                  </span>
+                </div>
+                <h2 className="text-xl font-extrabold text-white leading-tight">{viewingPaper.title}</h2>
+                <p className="text-xs text-slate-400">
+                  Course: <span className="text-white font-semibold">{course?.name}</span> &bull;
+                  Total Marks: <span className="text-white font-semibold">{viewingPaper.totalMarks}</span> &bull;
+                  By: <span className="text-accent-400 font-semibold">{viewingPaper.teacher?.name || 'Faculty'}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingPaper(null)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Questions List */}
+            <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+              {/* Group questions by type */}
+              {(() => {
+                const groups = [
+                  { key: 'mcq', label: 'Section A — Multiple Choice Questions', color: 'text-accent-400 bg-accent-500/10 border-accent-500/20' },
+                  { key: 'true_false', label: 'Section B — True / False', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+                  { key: 'fill_in_the_blank', label: 'Section C — Fill in the Blanks', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+                  { key: 'short_question', label: 'Section D — Short Answer Questions', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
+                  { key: 'long_question', label: 'Section E — Essay / Long Questions', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
+                ];
+
+                return groups.map((group) => {
+                  const groupQs = (viewingPaper.questions || []).filter(q => q.type === group.key);
+                  if (groupQs.length === 0) return null;
+
+                  return (
+                    <div key={group.key} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border ${group.color}`}>
+                          {group.label} ({groupQs.length} Q)
+                        </span>
+                      </div>
+
+                      {groupQs.map((q, qIdx) => (
+                        <div key={qIdx} className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <span className="shrink-0 w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
+                              {qIdx + 1}
+                            </span>
+                            <p className="text-sm text-white font-medium leading-relaxed pt-0.5">{q.questionText}</p>
+                          </div>
+
+                          {/* MCQ Options */}
+                          {q.options && q.options.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-10">
+                              {q.options.map((opt, oIdx) => (
+                                <div
+                                  key={oIdx}
+                                  className="px-3 py-2 rounded-xl border text-xs flex items-center gap-2 bg-slate-900/50 border-slate-800 text-slate-300"
+                                >
+                                  <span className="w-5 h-5 shrink-0 rounded-full border border-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-400">
+                                    {String.fromCharCode(65 + oIdx)}
+                                  </span>
+                                  <span>{opt}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* True/False marker */}
+                          {q.type === 'true_false' && (
+                            <div className="pl-10 flex gap-2">
+                              {['True', 'False'].map(tf => (
+                                <span key={tf} className="px-4 py-1.5 rounded-xl border border-slate-700 bg-slate-900 text-xs text-slate-300 font-medium">{tf}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Fill blank / Short / Long — answer lines */}
+                          {(q.type === 'fill_in_the_blank' || q.type === 'short_question' || q.type === 'long_question') && (
+                            <div className="pl-10 space-y-1">
+                              {Array.from({ length: q.type === 'long_question' ? 5 : q.type === 'short_question' ? 3 : 1 }).map((_, lIdx) => (
+                                <div key={lIdx} className="h-7 border-b border-dashed border-slate-700" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-slate-800 flex items-center justify-between gap-4 bg-slate-950/30">
+              <p className="text-[10px] text-slate-500 font-medium">
+                {viewingPaper.questions?.length || 0} total questions &bull; Source: {viewingPaper.pdfName}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewingPaper(null)}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl cursor-pointer transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Simple Close Icon mapping
-const X = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-  </svg>
-);
 
 export default CourseDetail;

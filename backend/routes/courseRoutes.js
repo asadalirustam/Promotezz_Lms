@@ -8,7 +8,10 @@ const {
   deleteCourse,
   enrollInCourse,
   getMyEnrolledCourses,
-  getCourseStudents
+  getCourseStudents,
+  getCourseGradebook,
+  updateStudentGrades,
+  getMyCourseEnrollment
 } = require('../controllers/courseController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
@@ -28,5 +31,12 @@ router.route('/:id')
 
 router.post('/:id/enroll', authorize('student'), enrollInCourse);
 router.get('/:id/students', authorize('admin', 'teacher', 'hod'), getCourseStudents);
+
+// Student Enrollment Endpoint
+router.get('/:id/enrollment/me', authorize('student'), getMyCourseEnrollment);
+
+// Gradebook Endpoints
+router.get('/:id/gradebook', authorize('admin', 'teacher', 'hod'), getCourseGradebook);
+router.put('/:id/gradebook/:enrollmentId', authorize('admin', 'teacher', 'hod'), updateStudentGrades);
 
 module.exports = router;

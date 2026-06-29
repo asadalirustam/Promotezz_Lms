@@ -12,14 +12,14 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden" style={{ background: '#F8FAFC', color: '#0F172A' }}>
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Pane */}
       <div className="flex flex-col flex-1 h-full min-w-0">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-8 bg-slate-950">
+        <main className="flex-1 overflow-y-auto p-8" style={{ background: '#F8FAFC' }}>
           <Outlet />
         </main>
       </div>

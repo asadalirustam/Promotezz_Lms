@@ -25,6 +25,30 @@ const EnrollmentSchema = new mongoose.Schema({
   gradePoints: {
     type: Number,
     default: 0.0 // numeric GPA point equivalent (e.g. 4.0, 3.5)
+  },
+  midtermMarks: {
+    type: Number,
+    default: 0
+  },
+  finalMarks: {
+    type: Number,
+    default: 0
+  },
+  sessionalMarks: {
+    type: Number,
+    default: 0
+  },
+  assignmentMarks: {
+    type: Number,
+    default: 0
+  },
+  quizMarks: {
+    type: Number,
+    default: 0
+  },
+  totalMarks: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

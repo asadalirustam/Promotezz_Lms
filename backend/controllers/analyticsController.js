@@ -220,29 +220,78 @@ const getHODStats = async (req, res) => {
 // @access  Private (Admin)
 const getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({});
-    const studentCount = await User.countDocuments({ role: 'student' });
-    const teacherCount = await User.countDocuments({ role: 'teacher' });
-    const hodCount = await User.countDocuments({ role: 'hod' });
-    const adminCount = await User.countDocuments({ role: 'admin' });
-
-    const totalCourses = await Course.countDocuments({});
+    // ── Core counts ───────────────────────────────────────────────────
+    const totalUsers       = await User.countDocuments({});
+    const studentCount     = await User.countDocuments({ role: 'student' });
+    const teacherCount     = await User.countDocuments({ role: 'teacher' });
+    const hodCount         = await User.countDocuments({ role: 'hod' });
+    const adminCount       = await User.countDocuments({ role: 'admin' });
+    const totalCourses     = await Course.countDocuments({});
     const totalAssignments = await Assignment.countDocuments({});
-    const totalResources = await Resource.countDocuments({});
+    const totalResources   = await Resource.countDocuments({});
+    const totalQuizzes     = await Quiz.countDocuments({});
+    const totalSubmissions = await Submission.countDocuments({});
+    const totalEnrollments = await Enrollment.countDocuments({});
+    const gradedSubmissions  = await Submission.countDocuments({ status: 'graded' });
+    const pendingSubmissions = await Submission.countDocuments({ status: 'submitted' });
+
+    // ── Recent 8 users (for activity feed) ────────────────────────────
+    const recentUsers = await User.find({})
+      .select('name email role createdAt department semester')
+      .sort({ createdAt: -1 })
+      .limit(8);
+
+    // ── Monthly user registrations — last 6 months ────────────────────
+    const now = new Date();
+    const monthlyReg = [];
+    const monthLabels = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const count = await User.countDocuments({ createdAt: { $gte: start, $lte: end } });
+      monthlyReg.push(count);
+      monthLabels.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
+    }
+
+    // ── Top 5 courses by enrollment count ─────────────────────────────
+    const topCourses = await Enrollment.aggregate([
+      { $group: { _id: '$course', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'courses', localField: '_id', foreignField: '_id', as: 'course' } },
+      { $unwind: '$course' },
+      { $project: { name: '$course.name', code: '$course.code', count: 1 } }
+    ]);
+
+    // ── Submission trend — last 6 months ──────────────────────────────
+    const submissionTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const count = await Submission.countDocuments({ createdAt: { $gte: start, $lte: end } });
+      submissionTrend.push(count);
+    }
 
     res.status(200).json({
       success: true,
       data: {
         totalUsers,
-        roles: {
-          student: studentCount,
-          teacher: teacherCount,
-          hod: hodCount,
-          admin: adminCount
-        },
+        roles: { student: studentCount, teacher: teacherCount, hod: hodCount, admin: adminCount },
         totalCourses,
         totalAssignments,
-        totalResources
+        totalResources,
+        totalQuizzes,
+        totalSubmissions,
+        totalEnrollments,
+        gradedSubmissions,
+        pendingSubmissions,
+        monthLabels,
+        monthlyReg,
+        submissionTrend,
+        topCourses,
+        recentUsers
       }
     });
   } catch (error) {
