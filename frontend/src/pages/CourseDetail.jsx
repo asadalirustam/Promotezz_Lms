@@ -81,6 +81,17 @@ const CourseDetail = () => {
   const [examPapers, setExamPapers] = useState([]);
   const [viewingPaper, setViewingPaper] = useState(null); // Paper object being viewed by student
 
+  // Lecture Summaries states
+  const [lectureSummaries, setLectureSummaries] = useState([]);
+  const [savedSummaries, setSavedSummaries] = useState([]);
+  const [selectedSummary, setSelectedSummary] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryFile, setSummaryFile] = useState(null);
+  const [newSummaryTitle, setNewSummaryTitle] = useState('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryActiveSubTab, setSummaryActiveSubTab] = useState('key-points');
+  const [flippedSummaryCards, setFlippedSummaryCards] = useState({});
+
   // Sessional & Gradebook states
   const [gradebookList, setGradebookList] = useState([]);
   const [myEnrollment, setMyEnrollment] = useState(null);
@@ -95,6 +106,12 @@ const CourseDetail = () => {
     grade: '',
     status: 'active'
   });
+
+  // AI Assignment Checker states
+  const [aiReports, setAiReports] = useState({});
+  const [loadingAIReport, setLoadingAIReport] = useState({});
+  const [selectedSubForReport, setSelectedSubForReport] = useState(null);
+  const [showAIReportModal, setShowAIReportModal] = useState(false);
 
   const fetchCourseDetails = async () => {
     try {
@@ -169,6 +186,15 @@ const CourseDetail = () => {
         } else {
           const res = await api.get(`/courses/${id}/gradebook`);
           setGradebookList(res.data.data);
+        }
+      } else if (tab === 'lecture-summaries') {
+        const res = await api.get(`/lecture-summaries/course/${id}`);
+        setLectureSummaries(res.data.data);
+        
+        if (user?.role === 'student') {
+          const savedRes = await api.get('/lecture-summaries/saved');
+          const savedIds = savedRes.data.data.map(s => s._id);
+          setSavedSummaries(savedIds);
         }
       }
     } catch (err) {
@@ -269,6 +295,115 @@ const CourseDetail = () => {
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Submission failed');
+    }
+  };
+
+  // --- AI ASSIGNMENT CHECKER HANDLERS ---
+  const handleTriggerAIAnalysis = async (submissionId) => {
+    try {
+      setLoadingAIReport(prev => ({ ...prev, [submissionId]: true }));
+      const res = await api.post('/ai-assignments/evaluate', { submissionId });
+      if (res.data.success) {
+        setAiReports(prev => ({ ...prev, [submissionId]: res.data.data }));
+        alert('AI grading and grammar evaluation successfully compiled!');
+        loadTabContent('assignments');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'AI Checker failed to analyze file content.');
+    } finally {
+      setLoadingAIReport(prev => ({ ...prev, [submissionId]: false }));
+    }
+  };
+
+  const handleViewAIReport = async (submissionId, submissionObj = null) => {
+    try {
+      if (aiReports[submissionId]) {
+        setSelectedSubForReport(submissionObj || { _id: submissionId });
+        setShowAIReportModal(true);
+        return;
+      }
+
+      setLoadingAIReport(prev => ({ ...prev, [submissionId]: true }));
+      const res = await api.get(`/ai-assignments/report/${submissionId}`);
+      if (res.data.success) {
+        setAiReports(prev => ({ ...prev, [submissionId]: res.data.data }));
+        setSelectedSubForReport(submissionObj || { _id: submissionId, student: { name: user.name } });
+        setShowAIReportModal(true);
+      }
+    } catch (err) {
+      // If report doesn't exist, we can offer to generate it!
+      if (err.response?.status === 404) {
+        if (window.confirm('No AI report found. Would you like to run the AI Assignment Checker now?')) {
+          handleTriggerAIAnalysis(submissionId);
+        }
+      } else {
+        alert('Failed to retrieve AI report details.');
+      }
+    } finally {
+      setLoadingAIReport(prev => ({ ...prev, [submissionId]: false }));
+    }
+  };
+
+  const handleDownloadAIReport = async (submissionId) => {
+    try {
+      const res = await api.get(`/ai-assignments/report/${submissionId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `AI_Evaluation_Report_${submissionId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert('Failed to download PDF report.');
+    }
+  };
+
+  // --- LECTURE SUMMARIZER HANDLERS ---
+  const handleSummaryGenerate = async (e) => {
+    e.preventDefault();
+    if (!newSummaryTitle || !summaryFile) {
+      alert('Please specify a summary title and select a lecture file.');
+      return;
+    }
+
+    try {
+      setIsGeneratingSummary(true);
+      const formData = new FormData();
+      formData.append('title', newSummaryTitle);
+      formData.append('courseId', id);
+      formData.append('lectureFile', summaryFile);
+
+      const res = await api.post('/lecture-summaries/summarize', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data.success) {
+        alert('AI Lecture Summary generated and posted successfully!');
+        setNewSummaryTitle('');
+        setSummaryFile(null);
+        // Reset file input element if needed
+        const fileInput = document.getElementById('summary-file-input');
+        if (fileInput) fileInput.value = '';
+        loadTabContent('lecture-summaries');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'AI summarizer failed. Check API key details.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleSaveSummary = async (summaryId) => {
+    try {
+      const res = await api.post(`/lecture-summaries/${summaryId}/save`);
+      if (res.data.success) {
+        alert('Summary saved to your study bookmarks!');
+        // Refresh to reflect bookmark indicators
+        loadTabContent('lecture-summaries');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save summary.');
     }
   };
 
@@ -487,6 +622,7 @@ const CourseDetail = () => {
         {[
           { id: 'resources', label: 'Resources Library', icon: BookOpen },
           { id: 'assignments', label: 'Assignments', icon: FileText },
+          { id: 'lecture-summaries', label: 'Lecture Summarizer', icon: Sparkles },
           { id: 'quizzes', label: 'MCQ Quizzes', icon: HelpCircle },
           { id: 'attendance', label: 'Attendance', icon: CheckSquare },
           { id: 'timetable', label: 'Timetable', icon: Calendar },
@@ -581,6 +717,125 @@ const CourseDetail = () => {
         </div>
       )}
 
+      {/* TAB: LECTURE SUMMARIES */}
+      {activeTab === 'lecture-summaries' && (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-accent-400" />
+                AI Lecture Summarizer
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">Generate structured summaries, revision cards and key points using Gemini AI.</p>
+            </div>
+          </div>
+
+          {/* Teacher Upload Panel */}
+          {user?.role === 'teacher' && (
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 max-w-xl">
+              <h4 className="font-bold text-white text-sm">Post New AI Lecture Summary</h4>
+              <form onSubmit={handleSummaryGenerate} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Lecture Title / Chapter</label>
+                  <input
+                    type="text"
+                    value={newSummaryTitle}
+                    onChange={(e) => setNewSummaryTitle(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs outline-none focus:border-accent-500 text-white"
+                    placeholder="e.g. Chapter 4: Deep CNN Architectures"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Select Slides/Text Sheet (PDF/TXT)</label>
+                  <input
+                    type="file"
+                    id="summary-file-input"
+                    onChange={(e) => setSummaryFile(e.target.files[0])}
+                    className="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-800 file:text-slate-300 file:cursor-pointer"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isGeneratingSummary}
+                  className="px-4 py-2.5 bg-gradient-to-r from-accent-600 to-indigo-600 text-white font-bold text-xs rounded-xl hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  {isGeneratingSummary ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Extracting & Summarizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Post Lecture Summary</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Summaries list */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {lectureSummaries.length > 0 ? (
+              lectureSummaries.map((sum) => {
+                const isSaved = savedSummaries.includes(sum._id);
+                return (
+                  <div key={sum._id} className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider bg-slate-900 border border-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
+                          AI Compiled
+                        </span>
+                        <span className="text-[10px] text-slate-500">{new Date(sum.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="font-bold text-sm text-white">{sum.title}</h4>
+                      <p className="text-xs text-slate-400 line-clamp-2">{sum.summaryText}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-800/40 pt-4 mt-6">
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase">By: {sum.teacher?.name}</span>
+                      
+                      <div className="flex items-center gap-2">
+                        {user?.role === 'student' && (
+                          <button
+                            onClick={() => handleSaveSummary(sum._id)}
+                            disabled={isSaved}
+                            className={`px-3 py-1.5 font-semibold text-[10px] uppercase rounded-lg border transition-all cursor-pointer ${
+                              isSaved
+                                ? 'bg-slate-950 border-slate-850 text-slate-500 cursor-not-allowed'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            {isSaved ? 'Bookmarked' : 'Save Summary'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedSummary(sum);
+                            setShowSummaryModal(true);
+                            setSummaryActiveSubTab('key-points');
+                            setFlippedSummaryCards({});
+                          }}
+                          className="px-3.5 py-1.5 bg-accent-600 hover:bg-accent-500 text-white font-semibold text-[10px] uppercase rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Study Guide</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs text-slate-500 py-4 col-span-full">No lecture summaries posted for this course. Click generate to construct one.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TAB 2: ASSIGNMENTS */}
       {activeTab === 'assignments' && (
         <div className="space-y-6">
@@ -638,12 +893,24 @@ const CourseDetail = () => {
                     <div className="shrink-0 flex flex-col items-start md:items-end gap-3 justify-center">
                       {user?.role === 'student' ? (
                         sub ? (
-                          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1.5 text-xs text-right">
-                            <span className="font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full text-[10px] uppercase">
-                              {sub.status}
-                            </span>
-                            <p className="text-slate-400">Graded Score: <span className="font-bold text-white">{sub.grade !== undefined ? `${sub.grade}/${assign.maxPoints}` : 'N/A'}</span></p>
+                          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2 text-xs text-right">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full text-[10px] uppercase">
+                                {sub.status}
+                              </span>
+                              <p className="text-slate-400">Graded Score: <span className="font-bold text-white">{sub.grade !== undefined ? `${sub.grade}/${assign.maxPoints}` : 'N/A'}</span></p>
+                            </div>
                             {sub.feedback && <p className="text-[10px] text-slate-500 italic max-w-xs leading-snug pt-1">Feedback: "{sub.feedback}"</p>}
+                            <div className="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleViewAIReport(sub._id, sub)}
+                                disabled={loadingAIReport[sub._id]}
+                                className="text-[10px] font-bold text-accent-400 hover:text-accent-300 transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                                <span>{loadingAIReport[sub._id] ? 'Analyzing...' : 'View AI Feedback Report'}</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -749,10 +1016,18 @@ const CourseDetail = () => {
                               className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-xs w-16 text-center outline-none focus:border-accent-500"
                             />
                           </td>
-                          <td className="py-4 text-right">
+                           <td className="py-4 text-right flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleViewAIReport(sub._id, sub)}
+                              disabled={loadingAIReport[sub._id]}
+                              className="px-2.5 py-1 bg-slate-900 border border-slate-800 text-accent-400 hover:text-accent-300 font-semibold text-xs rounded-lg cursor-pointer transition-all flex items-center gap-1 shrink-0"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>{loadingAIReport[sub._id] ? 'Analyzing...' : 'AI Report'}</span>
+                            </button>
                             <button
                               onClick={() => handleGradeSubmit(sub._id)}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg cursor-pointer transition-all"
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg cursor-pointer transition-all shrink-0"
                             >
                               Save Grade
                             </button>
@@ -2024,6 +2299,260 @@ const CourseDetail = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI ASSIGNMENT EVALUATION REPORT MODAL */}
+      {showAIReportModal && selectedSubForReport && aiReports[selectedSubForReport._id] && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl my-8 relative overflow-hidden text-left">
+            <div className="h-1 w-full bg-gradient-to-r from-accent-600 via-indigo-500 to-accent-400" />
+            
+            {/* Header */}
+            <div className="p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider bg-accent-500/10 border border-accent-500/20 text-accent-400 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
+                  <Sparkles className="w-3 h-3 animate-pulse" />
+                  Gemini Evaluator
+                </span>
+                <h2 className="text-xl font-extrabold text-white leading-tight">AI Assignment Assessment Report</h2>
+                <p className="text-xs text-slate-400 font-semibold uppercase">Student: {selectedSubForReport.student?.name || user.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAIReportModal(false);
+                  setSelectedSubForReport(null);
+                }}
+                className="p-2 bg-slate-800 hover:bg-slate-755 border border-slate-755 rounded-xl text-slate-405 hover:text-white transition-all cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content Details */}
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto text-xs text-slate-300 font-medium">
+              {/* Score Indicator */}
+              <div className="bg-slate-950/50 p-5 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">AI Quality Grading Score</p>
+                  <p className="text-[11px] text-slate-500">Based on rubric compliance, technical depth, and spelling criteria.</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-3xl font-black text-accent-400">{aiReports[selectedSubForReport._id].aiScore}%</span>
+                </div>
+              </div>
+
+              {/* Grammar Errors */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-rose-450 uppercase tracking-wide">Grammar & Style Checkpoints</h4>
+                {aiReports[selectedSubForReport._id].grammarErrors?.length > 0 ? (
+                  <div className="space-y-2">
+                    {aiReports[selectedSubForReport._id].grammarErrors.map((err, idx) => (
+                      <div key={idx} className="p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-lg text-rose-350">
+                        • {err}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic pl-1">No grammatical concerns detected.</p>
+                )}
+              </div>
+
+              {/* Missing Topics */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-warning uppercase tracking-wide">Missing Topics / Concepts</h4>
+                {aiReports[selectedSubForReport._id].missingTopics?.length > 0 ? (
+                  <div className="space-y-2">
+                    {aiReports[selectedSubForReport._id].missingTopics.map((topic, idx) => (
+                      <div key={idx} className="p-2.5 bg-amber-500/5 border border-amber-500/10 rounded-lg text-amber-350">
+                        • {topic}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic pl-1">Covered all required core syllabus modules.</p>
+                )}
+              </div>
+
+              {/* Suggestions */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">Actionable Improvements Suggestions</h4>
+                {aiReports[selectedSubForReport._id].suggestions?.length > 0 ? (
+                  <div className="space-y-2">
+                    {aiReports[selectedSubForReport._id].suggestions.map((sug, idx) => (
+                      <div key={idx} className="p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-emerald-350">
+                        • {sug}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic pl-1">No recommendations needed.</p>
+                )}
+              </div>
+
+              {/* Feedback Review */}
+              <div className="space-y-2 bg-slate-950/20 p-4 rounded-xl border border-slate-800">
+                <h4 className="text-[10px] font-bold text-white uppercase tracking-wide">Overall Review Constructive Feedback</h4>
+                <p className="leading-relaxed text-slate-400 pt-1.5">{aiReports[selectedSubForReport._id].feedback}</p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-slate-800 flex items-center justify-between gap-4 bg-slate-950/30">
+              <button
+                onClick={() => handleDownloadAIReport(selectedSubForReport._id)}
+                className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white font-bold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1.5 shadow-md shadow-accent-650/15"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF Report</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowAIReportModal(false);
+                  setSelectedSubForReport(null);
+                }}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LECTURE SUMMARY VIEWER MODAL */}
+      {showSummaryModal && selectedSummary && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-3xl shadow-2xl my-8 relative overflow-hidden text-left text-xs text-slate-300">
+            <div className="h-1 w-full bg-gradient-to-r from-accent-600 via-indigo-500 to-accent-400" />
+
+            {/* Header */}
+            <div className="p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider bg-accent-500/10 border border-accent-500/20 text-accent-400 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
+                  <Sparkles className="w-3 h-3 animate-pulse" />
+                  Study Guide Portal
+                </span>
+                <h2 className="text-xl font-extrabold text-white leading-tight">{selectedSummary.title}</h2>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Subject: {course?.name} &bull; Instructor: {selectedSummary.teacher?.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setSelectedSummary(null);
+                }}
+                className="p-2 bg-slate-800 hover:bg-slate-750 border border-slate-750 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sub-tabs Row in Modal */}
+            <div className="flex border-b border-slate-800 bg-slate-950/40 px-6 gap-6 overflow-x-auto">
+              {[
+                { id: 'key-points', label: 'Key Points' },
+                { id: 'definitions', label: 'Definitions' },
+                { id: 'flashcards', label: 'Flashcards' },
+                { id: 'questions', label: 'Exam Questions' },
+                { id: 'notes', label: 'Revision Notes' }
+              ].map(subTab => (
+                <button
+                  key={subTab.id}
+                  onClick={() => setSummaryActiveSubTab(subTab.id)}
+                  className={`py-3 text-[11px] font-bold uppercase transition-all cursor-pointer relative ${
+                    summaryActiveSubTab === subTab.id ? 'text-accent-400' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {subTab.label}
+                  {summaryActiveSubTab === subTab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-500 rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Sub-tab content view */}
+            <div className="p-6 space-y-4 max-h-[50vh] overflow-y-auto">
+              {/* Key Points */}
+              {summaryActiveSubTab === 'key-points' && (
+                <div className="space-y-3">
+                  {selectedSummary.keyPoints?.map((pt, idx) => (
+                    <div key={idx} className="p-3 bg-slate-950/40 border border-slate-850 rounded-xl flex items-start gap-2.5">
+                      <span className="text-accent-400 font-bold mt-0.5">•</span>
+                      <p className="leading-relaxed text-slate-350">{pt}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Definitions */}
+              {summaryActiveSubTab === 'definitions' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedSummary.definitions?.map((def, idx) => (
+                    <div key={idx} className="p-4 bg-slate-950/40 border border-slate-850 rounded-xl space-y-2">
+                      <h5 className="font-extrabold text-xs text-white uppercase tracking-wider">{def.term}</h5>
+                      <p className="text-slate-400 leading-relaxed">{def.definition}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Flashcards */}
+              {summaryActiveSubTab === 'flashcards' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedSummary.flashcards?.map((card, idx) => {
+                    const isFlipped = flippedSummaryCards[idx];
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setFlippedSummaryCards({ ...flippedSummaryCards, [idx]: !isFlipped })}
+                        className={`w-full min-h-28 p-5 rounded-2xl border text-center flex flex-col justify-center items-center transition-all duration-300 cursor-pointer shadow-sm ${isFlipped ? 'bg-accent-500/5 border-accent-500/35 text-accent-400' : 'bg-slate-950/60 border-slate-850 text-slate-300 hover:border-slate-800'}`}
+                      >
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                          {isFlipped ? 'Answer' : 'Question'}
+                        </span>
+                        <p className="text-[11px] font-bold leading-normal">
+                          {isFlipped ? card.answer : card.question}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Exam Questions */}
+              {summaryActiveSubTab === 'questions' && (
+                <div className="space-y-3">
+                  {selectedSummary.importantQuestions?.map((q, idx) => (
+                    <div key={idx} className="p-3 bg-slate-950/40 border border-slate-850 rounded-xl flex items-start gap-2.5">
+                      <span className="text-accent-400 font-bold mt-0.5">•</span>
+                      <p className="leading-relaxed text-slate-350">{q}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Revision Notes */}
+              {summaryActiveSubTab === 'notes' && (
+                <div className="bg-slate-950/20 p-4 rounded-xl border border-slate-800">
+                  <p className="leading-relaxed text-slate-400 whitespace-pre-wrap">{selectedSummary.revisionNotes || 'No notes compiled.'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950/30">
+              <button
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setSelectedSummary(null);
+                }}
+                className="px-5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-350 font-bold text-xs rounded-xl cursor-pointer transition-all"
+              >
+                Close Guide
+              </button>
             </div>
           </div>
         </div>

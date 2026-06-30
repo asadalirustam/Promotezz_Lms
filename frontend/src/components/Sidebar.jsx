@@ -12,7 +12,16 @@ import {
   FolderOpen,
   Cpu,
   Calendar,
-  Sparkles
+  Sparkles,
+  Compass,
+  MessageSquare,
+  Contact,
+  Navigation,
+  Shield,
+  DollarSign,
+  Receipt,
+  Award,
+  Briefcase
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -32,6 +41,13 @@ const Sidebar = () => {
           { name: 'Dashboard',       path: '/dashboard', icon: LayoutDashboard },
           { name: 'My Courses',      path: '/courses',   icon: BookOpen },
           { name: 'Weekly Timetable',path: '/timetable', icon: Calendar },
+          { name: 'AI Career Advisor', path: '/career-advisor', icon: Compass },
+          { name: 'AI Study Planner', path: '/study-planner', icon: Calendar },
+          { name: 'Exam Prep Center', path: '/exam-prep', icon: Sparkles },
+          { name: 'Degree Predictor', path: '/semester-predictor', icon: BarChart3 },
+          { name: 'Campus Navigator', path: '/campus-navigation', icon: Navigation },
+          { name: 'Digital ID Pass',  path: '/digital-id', icon: Contact },
+          { name: 'Workspace Chat',   path: '/chat', icon: MessageSquare },
           { name: 'Notice Board',    path: '/notices',   icon: Bell },
           { name: 'AI Library',      path: '/resources', icon: FolderOpen }
         ];
@@ -40,6 +56,8 @@ const Sidebar = () => {
           { name: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
           { name: 'My Courses',       path: '/courses',   icon: BookOpen },
           { name: 'Weekly Timetable', path: '/timetable', icon: Calendar },
+          { name: 'QR Attendance Scan', path: '/digital-id', icon: Contact },
+          { name: 'Workspace Chat',    path: '/chat', icon: MessageSquare },
           { name: 'AI Paper Generator', path: '/generator', icon: Sparkles },
           { name: 'Notice Board',     path: '/notices',   icon: Bell },
           { name: 'Material Library', path: '/resources', icon: FolderOpen }
@@ -48,6 +66,8 @@ const Sidebar = () => {
         return [
           { name: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
           { name: 'Weekly Timetable', path: '/timetable', icon: Calendar },
+          { name: 'QR Attendance Scan', path: '/digital-id', icon: Contact },
+          { name: 'Workspace Chat',    path: '/chat', icon: MessageSquare },
           { name: 'Dept Analytics',   path: '/analytics', icon: BarChart3 },
           { name: 'Notices Panel',    path: '/notices',   icon: Bell }
         ];
@@ -57,7 +77,23 @@ const Sidebar = () => {
           { name: 'Admin Panel',      path: '/admin-panel', icon: Cpu },
           { name: 'Weekly Timetable', path: '/timetable',   icon: Calendar },
           { name: 'User Directory',   path: '/users',       icon: Users },
+          { name: 'QR Attendance Scan', path: '/digital-id', icon: Contact },
+          { name: 'Workspace Chat',    path: '/chat', icon: MessageSquare },
           { name: 'Notice Manager',   path: '/notices',     icon: Bell }
+        ];
+      case 'examination_incharge':
+        return [
+          { name: 'Dashboard',        path: '/dashboard',           icon: LayoutDashboard },
+          { name: 'Incharge Panel',   path: '/exam-incharge-panel', icon: Shield },
+          { name: 'Notice Board',     path: '/notices',             icon: Bell },
+          { name: 'Workspace Chat',    path: '/chat',                icon: MessageSquare }
+        ];
+      case 'accountant':
+        return [
+          { name: 'Dashboard',        path: '/dashboard',          icon: LayoutDashboard },
+          { name: 'Finance Panel',    path: '/accountant-panel',   icon: DollarSign },
+          { name: 'Notice Board',     path: '/notices',            icon: Bell },
+          { name: 'Workspace Chat',   path: '/chat',               icon: MessageSquare }
         ];
       default:
         return [];
@@ -71,6 +107,8 @@ const Sidebar = () => {
     teacher: { bg: '#DBEAFE', color: '#2563EB', border: '#93C5FD' },
     hod:     { bg: '#FEF3C7', color: '#D97706', border: '#FCD34D' },
     admin:   { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' },
+  examination_incharge: { bg: '#F5F3FF', color: '#7C3AED', border: '#DDD6FE' },
+    accountant: { bg: '#FFF7ED', color: '#EA580C', border: '#FED7AA' }
   };
   const rb = roleBadge[user?.role] || roleBadge.teacher;
 

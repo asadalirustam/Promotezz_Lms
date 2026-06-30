@@ -188,7 +188,7 @@ body {
   0%, 100% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.03); opacity: 1; }
 }
-.animate-soft { animation: soft-pulse 4s infinite ease-in-out; }
+/* .animate-soft { animation: soft-pulse 4s infinite ease-in-out; } */
 
 @keyframes shimmer-in {
   0% { opacity: 0; transform: translateX(-100%); }

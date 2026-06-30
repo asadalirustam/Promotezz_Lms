@@ -14,6 +14,17 @@ import Timetable from './pages/Timetable';
 import QuizPaperGenerator from './pages/QuizPaperGenerator';
 import AdminPanel from './pages/AdminPanel';
 
+// [NEW PAGES IMPORTS]
+import CareerAdvisor from './pages/CareerAdvisor';
+import StudyPlanner from './pages/StudyPlanner';
+import CampusNavigation from './pages/CampusNavigation';
+import TeacherStudentChat from './pages/TeacherStudentChat';
+import DigitalID from './pages/DigitalID';
+import ExamPrep from './pages/ExamPrep';
+import SemesterPredictor from './pages/SemesterPredictor';
+import ExamInchargePanel from './pages/ExamInchargePanel';
+import AccountantPanel from './pages/AccountantPanel';
+
 const App = () => {
   return (
     <BrowserRouter>
@@ -33,10 +44,21 @@ const App = () => {
           <Route path="resources" element={<Resources />} />
           <Route path="notices" element={<Notices />} />
           <Route path="users" element={<Users />} />
-          <Route path="analytics" element={<Analytics />} />
+          <Route path="analytics" element={ <Analytics /> } />
           <Route path="timetable" element={<Timetable />} />
           <Route path="generator" element={<QuizPaperGenerator />} />
           <Route path="admin-panel" element={<AdminPanel />} />
+          
+          {/* [NEW MODULES ROUTES] */}
+          <Route path="career-advisor" element={<CareerAdvisor />} />
+          <Route path="study-planner" element={<StudyPlanner />} />
+          <Route path="campus-navigation" element={<CampusNavigation />} />
+          <Route path="chat" element={<TeacherStudentChat />} />
+          <Route path="digital-id" element={<DigitalID />} />
+          <Route path="exam-prep" element={<ExamPrep />} />
+          <Route path="semester-predictor" element={<SemesterPredictor />} />
+          <Route path="exam-incharge-panel" element={<ExamInchargePanel />} />
+          <Route path="accountant-panel" element={<AccountantPanel />} />
         </Route>
 
         {/* Fallback Redirect */}

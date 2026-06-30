@@ -7,6 +7,7 @@ const Quiz = require('../models/Quiz');
 const QuizResult = require('../models/QuizResult');
 const Attendance = require('../models/Attendance');
 const Resource = require('../models/Resource');
+const GeneratedPaper = require('../models/GeneratedPaper');
 
 // @desc    Get dashboard statistics for Students
 // @route   GET /api/analytics/student
@@ -39,24 +40,92 @@ const getStudentStats = async (req, res) => {
       dueDate: { $gte: new Date() }
     }).populate('course', 'name code').limit(5);
 
-    // Attendance calculation
-    const attendanceLogs = await Attendance.find({ course: { $in: courseIds } });
+    // Attendance logs for heatmap
+    const allAttendance = await Attendance.find({}).populate('course');
+    const attendanceHeatmap = [];
     let totalClasses = 0;
     let presentCount = 0;
     let lateCount = 0;
 
-    attendanceLogs.forEach(log => {
+    allAttendance.forEach(log => {
       const record = log.records.find(r => r.student.toString() === studentId);
       if (record) {
         totalClasses++;
         if (record.status === 'present') presentCount++;
         else if (record.status === 'late') lateCount++;
+
+        attendanceHeatmap.push({
+          date: log.date.toISOString().slice(0, 10),
+          status: record.status,
+          course: log.course?.name || 'Class'
+        });
       }
     });
 
     const attendanceRate = totalClasses > 0
       ? Math.round(((presentCount + (lateCount * 0.5)) / totalClasses) * 100)
-      : 85; // Default mockup attendance rate if no logs yet
+      : 85;
+
+    // Quiz Performance
+    const quizResults = await QuizResult.find({ student: studentId }).populate('quiz');
+    const quizPerformance = quizResults.map(qr => ({
+      title: qr.quiz?.title || 'Quiz',
+      score: qr.score,
+      totalQuestions: qr.totalQuestions,
+      percentage: qr.totalQuestions > 0 ? Math.round((qr.score / qr.totalQuestions) * 100) : 0,
+      date: qr.createdAt
+    }));
+
+    // Assignment Performance
+    const submissionHistory = await Submission.find({ student: studentId }).populate('assignment');
+    const assignmentPerformance = submissionHistory.map(sh => ({
+      title: sh.assignment?.title || 'Assignment',
+      grade: sh.grade || 0,
+      status: sh.status,
+      date: sh.submittedAt
+    }));
+
+    // Subject Performance
+    const subjectPerformance = [];
+    for (const e of enrollments) {
+      const courseSubmissions = submissionHistory.filter(s => s.assignment?.course.toString() === e.course._id.toString() && s.grade !== undefined);
+      const avgGrade = courseSubmissions.length > 0
+        ? courseSubmissions.reduce((acc, curr) => acc + curr.grade, 0) / courseSubmissions.length
+        : 80;
+
+      subjectPerformance.push({
+        courseName: e.course.name,
+        courseCode: e.course.code,
+        score: Math.round(avgGrade)
+      });
+    }
+
+    // Calculate average grade score from submissions and quizzes
+    let totalScore = 0;
+    let scoreCount = 0;
+    submissionHistory.forEach(s => {
+      if (s.grade !== undefined) {
+        totalScore += s.grade;
+        scoreCount++;
+      }
+    });
+    quizResults.forEach(q => {
+      if (q.score !== undefined && q.totalQuestions) {
+        totalScore += (q.score / q.totalQuestions) * 100;
+        scoreCount++;
+      }
+    });
+    const averagePercentage = scoreCount > 0 ? totalScore / scoreCount : 85;
+
+    // Monthly Progress (mocked array of last 6 months based on grading milestones)
+    const monthlyProgress = [
+      { month: 'Jan', score: 78 },
+      { month: 'Feb', score: 81 },
+      { month: 'Mar', score: 85 },
+      { month: 'Apr', score: 83 },
+      { month: 'May', score: 88 },
+      { month: 'Jun', score: Math.round(averagePercentage) }
+    ];
 
     res.status(200).json({
       success: true,
@@ -66,7 +135,12 @@ const getStudentStats = async (req, res) => {
         totalAssignments,
         completedSubmissions,
         attendanceRate,
-        upcomingAssignments
+        upcomingAssignments,
+        attendanceHeatmap,
+        quizPerformance,
+        assignmentPerformance,
+        subjectPerformance,
+        monthlyProgress
       }
     });
   } catch (error) {
@@ -299,9 +373,35 @@ const getAdminStats = async (req, res) => {
   }
 };
 
+const getExamInchargeStats = async (req, res) => {
+  try {
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const totalCourses = await Course.countDocuments({});
+    const totalExamPapers = await GeneratedPaper.countDocuments({});
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        totalStudents,
+        totalCourses,
+        totalExamPapers,
+        gradeBoundaries: {
+          aGrade: 85,
+          bGrade: 70,
+          cGrade: 50,
+          dGrade: 40
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getStudentStats,
   getTeacherStats,
   getHODStats,
-  getAdminStats
+  getAdminStats,
+  getExamInchargeStats
 };

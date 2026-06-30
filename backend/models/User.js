@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'teacher', 'admin', 'hod'],
+    enum: ['student', 'teacher', 'admin', 'hod', 'examination_incharge', 'accountant'],
     required: [true, 'Role is required']
   },
   profileImage: {
@@ -34,6 +34,32 @@ const UserSchema = new mongoose.Schema({
   semester: {
     type: Number,
     required: function() { return this.role === 'student'; }
+  },
+  skills: [{
+    type: String,
+    trim: true
+  }],
+  interests: [{
+    type: String,
+    trim: true
+  }],
+  xp: {
+    type: Number,
+    default: 0
+  },
+  level: {
+    type: Number,
+    default: 1
+  },
+  badges: [{
+    name: { type: String, required: true },
+    icon: { type: String, required: true },
+    unlockedAt: { type: Date, default: Date.now }
+  }],
+  streak: {
+    current: { type: Number, default: 0 },
+    max: { type: Number, default: 0 },
+    lastActive: { type: Date }
   }
 }, {
   timestamps: true

@@ -47,6 +47,25 @@ app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/generator', require('./routes/generatorRoutes'));
 
+// [NEW MODULES MOUNT]
+app.use('/api/ai-assignments', require('./routes/aiAssignmentRoutes'));
+app.use('/api/lecture-summaries', require('./routes/lectureSummaryRoutes'));
+app.use('/api/career-advisor', require('./routes/careerAdvisorRoutes'));
+app.use('/api/study-planner', require('./routes/studyPlannerRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/gamification', require('./routes/gamificationRoutes'));
+app.use('/api/semester-predictor', require('./routes/semesterPredictorRoutes'));
+app.use('/api/exam-prep', require('./routes/examPrepRoutes'));
+app.use('/api/degree-tracker', require('./routes/degreeTrackerRoutes'));
+app.use('/api/attendance-qr', require('./routes/attendanceQRRoutes'));
+
+// [FINANCE MODULE ROUTES]
+app.use('/api/accountant', require('./routes/accountantRoutes'));
+app.use('/api/fees', require('./routes/feeRoutes'));
+app.use('/api/scholarships', require('./routes/scholarshipRoutes'));
+app.use('/api/hr', require('./routes/expenseRoutes'));
+
+
 // Root route checking server status
 app.get('/', (req, res) => {
   res.json({ message: 'AI Department Learning Management System API is running successfully' });

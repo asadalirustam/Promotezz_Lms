@@ -37,11 +37,14 @@ const Login = () => {
   };
 
   const presets = [
-    { label: 'Admin',   email: 'admin@ailms.edu', pass: 'admin123',   color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
-    { label: 'HOD',     email: 'hod@ailms.edu',   pass: 'hod123',     color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
-    { label: 'Teacher', email: 'sarah@ailms.edu', pass: 'teacher123', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-    { label: 'Student', email: 'alex@ailms.edu',  pass: 'student123', color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' }
+    { label: 'Admin',   email: 'admin@ailms.edu',    pass: 'admin123',    color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+    { label: 'HOD',     email: 'hod@ailms.edu',      pass: 'hod123',      color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+    { label: 'Exam Incharge', email: 'exam@ailms.edu', pass: 'exam123',   color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+    { label: 'Accountant', email: 'accounts@ailms.edu', pass: 'accounts123', color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA' },
+    { label: 'Teacher', email: 'sarah@ailms.edu',    pass: 'teacher123',  color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
+    { label: 'Student', email: 'alex@ailms.edu',     pass: 'student123',  color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' }
   ];
+
 
   const handleApplyPreset = (p) => { setEmail(p.email); setPassword(p.pass); setErrorMessage(''); };
 
@@ -168,7 +171,7 @@ const Login = () => {
           {/* Demo Presets */}
           <div className="mt-7 pt-6" style={{ borderTop: '1px solid #E2E8F0' }}>
             <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>Quick Demo Logins</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {presets.map((p) => (
                 <button
                   key={p.label}
@@ -178,8 +181,8 @@ const Login = () => {
                   onMouseEnter={e => e.currentTarget.style.boxShadow = `0 4px 12px ${p.color}22`}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
                 >
-                  <span className="font-bold block" style={{ color: p.color }}>{p.label}</span>
-                  <span className="block text-[9px] truncate" style={{ color: '#94A3B8' }}>{p.email}</span>
+                  <span className="font-bold block text-[10px]" style={{ color: p.color }}>{p.label}</span>
+                  <span className="block text-[8px] truncate" style={{ color: '#94A3B8' }}>{p.email}</span>
                 </button>
               ))}
             </div>

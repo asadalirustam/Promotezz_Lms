@@ -732,6 +732,162 @@ const getMockQuestions = (text, type, count, difficulty) => {
   return JSON.stringify(selectedQuestions);
 };
 
+const getAllPapers = async (req, res) => {
+  try {
+    const papers = await GeneratedPaper.find({})
+      .populate('teacher', 'name email')
+      .populate('course', 'name code')
+      .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, count: papers.length, data: papers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const downloadPaperById = async (req, res) => {
+  try {
+    const paper = await GeneratedPaper.findById(req.params.id)
+      .populate('course', 'name code');
+    if (!paper) {
+      return res.status(404).json({ success: false, message: 'Exam paper not found' });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${paper.paperType.toLowerCase()}_exam.pdf`);
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+
+    doc.fontSize(16).font('Helvetica-Bold').text('UNIVERSITY OF ARTIFICIAL INTELLIGENCE', { align: 'center' });
+    doc.fontSize(12).font('Helvetica-Bold').text('Department of Artificial Intelligence & Data Science', { align: 'center' });
+    doc.moveDown(0.5);
+    
+    doc.fontSize(11).font('Helvetica').text(`${paper.paperType.toUpperCase()} EXAMINATION`, { align: 'center' });
+    doc.fontSize(13).font('Helvetica-Bold').text(paper.title.toUpperCase(), { align: 'center' });
+    doc.moveDown(1);
+
+    doc.font('Helvetica-Bold').fontSize(10);
+    doc.text(`Course Code: ${paper.courseCode || paper.course?.code || 'AI-301'}`, 50, 140);
+    doc.text(`Course Title: ${paper.courseName || paper.course?.name || 'Machine Learning'}`, 50, 155);
+    doc.text(`Time Allowed: ${paper.paperType === 'Quiz' ? '20 Mins' : paper.paperType === 'Midterm' ? '90 Mins' : '3 Hours'}`, 350, 140);
+    doc.text(`Maximum Marks: ${paper.totalMarks || 100}`, 350, 155);
+    
+    doc.moveTo(50, 175).lineTo(545, 175).strokeColor('#475569').stroke();
+    doc.moveDown(1.5);
+
+    doc.font('Helvetica').fontSize(9);
+    doc.text('Student Name: _______________________________________', 50, 185);
+    doc.text('Roll Number: _____________________', 380, 185);
+    doc.moveDown(1.5);
+    
+    doc.moveTo(50, 205).lineTo(545, 205).strokeColor('#cbd5e1').stroke();
+    doc.moveDown(2);
+
+    let currentY = 220;
+    
+    const mcqs = paper.questions.filter(q => q.type === 'mcq');
+    const tfs = paper.questions.filter(q => q.type === 'true_false');
+    const blanks = paper.questions.filter(q => q.type === 'fill_in_the_blank');
+    const shorts = paper.questions.filter(q => q.type === 'short_question');
+    const longs = paper.questions.filter(q => q.type === 'long_question');
+
+    if (mcqs.length > 0) {
+      doc.font('Helvetica-Bold').fontSize(11).text(`SECTION A: Multiple Choice Questions (${mcqs.length} Marks)`, 50, currentY);
+      currentY += 20;
+
+      mcqs.forEach((q, i) => {
+        if (currentY > 720) { doc.addPage(); currentY = 50; }
+        doc.font('Helvetica-Bold').fontSize(9).text(`${i + 1}.`, 50, currentY);
+        doc.font('Helvetica').fontSize(9).text(q.questionText, 65, currentY, { width: 480 });
+        
+        const linesUsed = Math.ceil(doc.widthOfString(q.questionText) / 480);
+        currentY += (linesUsed * 12) + 5;
+
+        if (q.options && q.options.length > 0) {
+          q.options.forEach((opt, oIdx) => {
+            if (currentY > 740) { doc.addPage(); currentY = 50; }
+            const charCode = String.fromCharCode(65 + oIdx);
+            doc.font('Helvetica').fontSize(9).text(`[ ${charCode} ]  ${opt}`, 80, currentY);
+            currentY += 12;
+          });
+          currentY += 5;
+        }
+      });
+      currentY += 15;
+    }
+
+    if (tfs.length > 0) {
+      if (currentY > 700) { doc.addPage(); currentY = 50; }
+      doc.font('Helvetica-Bold').fontSize(11).text(`SECTION B: True / False (${tfs.length} Marks)`, 50, currentY);
+      currentY += 20;
+
+      tfs.forEach((q, i) => {
+        if (currentY > 720) { doc.addPage(); currentY = 50; }
+        doc.font('Helvetica-Bold').fontSize(9).text(`${i + 1}.`, 50, currentY);
+        doc.font('Helvetica').fontSize(9).text(q.questionText, 65, currentY, { width: 400 });
+        doc.font('Helvetica-Bold').fontSize(9).text('[ True  /  False ]', 470, currentY);
+        currentY += 16;
+      });
+      currentY += 15;
+    }
+
+    if (blanks.length > 0) {
+      if (currentY > 700) { doc.addPage(); currentY = 50; }
+      doc.font('Helvetica-Bold').fontSize(11).text(`SECTION C: Fill in the Blanks (${blanks.length} Marks)`, 50, currentY);
+      currentY += 20;
+
+      blanks.forEach((q, i) => {
+        if (currentY > 720) { doc.addPage(); currentY = 50; }
+        doc.font('Helvetica-Bold').fontSize(9).text(`${i + 1}.`, 50, currentY);
+        doc.font('Helvetica').fontSize(9).text(q.questionText, 65, currentY, { width: 480 });
+        currentY += 16;
+      });
+      currentY += 15;
+    }
+
+    if (shorts.length > 0) {
+      if (currentY > 700) { doc.addPage(); currentY = 50; }
+      doc.font('Helvetica-Bold').fontSize(11).text(`SECTION D: Short Answer Questions (${shorts.length * 5} Marks)`, 50, currentY);
+      currentY += 20;
+
+      shorts.forEach((q, i) => {
+        if (currentY > 650) { doc.addPage(); currentY = 50; }
+        doc.font('Helvetica-Bold').fontSize(9).text(`${i + 1}. ${q.questionText}`, 50, currentY, { width: 490 });
+        currentY += 18;
+        doc.moveTo(50, currentY).lineTo(540, currentY).dash(2, { space: 2 }).strokeColor('#94a3b8').stroke();
+        currentY += 14;
+        doc.moveTo(50, currentY).lineTo(540, currentY).dash(2, { space: 2 }).strokeColor('#94a3b8').stroke();
+        currentY += 14;
+        doc.moveTo(50, currentY).lineTo(540, currentY).undash().strokeColor('#cbd5e1').stroke();
+        currentY += 20;
+      });
+      currentY += 15;
+    }
+
+    if (longs.length > 0) {
+      if (currentY > 700) { doc.addPage(); currentY = 50; }
+      doc.font('Helvetica-Bold').fontSize(11).text(`SECTION E: Essay / Long Questions (${longs.length * 10} Marks)`, 50, currentY);
+      currentY += 20;
+
+      longs.forEach((q, i) => {
+        if (currentY > 650) { doc.addPage(); currentY = 50; }
+        doc.font('Helvetica-Bold').fontSize(9).text(`${i + 1}. ${q.questionText}`, 50, currentY, { width: 490 });
+        currentY += 18;
+        for (let j = 0; j < 5; j++) {
+          doc.moveTo(50, currentY).lineTo(540, currentY).dash(2, { space: 2 }).strokeColor('#94a3b8').stroke();
+          currentY += 14;
+        }
+        doc.undash().strokeColor('#cbd5e1');
+        currentY += 20;
+      });
+    }
+
+    doc.end();
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   uploadPDF,
   generateQuestions,
@@ -739,5 +895,7 @@ module.exports = {
   savePaper,
   getPapersByCourse,
   deletePaper,
-  exportPaperPDF
+  exportPaperPDF,
+  getAllPapers,
+  downloadPaperById
 };

@@ -66,6 +66,21 @@ const seedData = async () => {
         department: 'Artificial Intelligence'
       },
       {
+        name: 'Prof. John Doe (Incharge)',
+        email: 'exam@ailms.edu',
+        password: hashPassword('exam123'),
+        role: 'examination_incharge',
+        department: 'Artificial Intelligence'
+      },
+      {
+        name: 'Mr. Hassan Ali (Accountant)',
+        email: 'accounts@ailms.edu',
+        password: hashPassword('accounts123'),
+        role: 'accountant',
+        department: 'Finance'
+      },
+
+      {
         name: 'Dr. Sarah Chen',
         email: 'sarah@ailms.edu',
         password: hashPassword('teacher123'),

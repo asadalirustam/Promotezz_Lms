@@ -7,7 +7,9 @@ const {
   savePaper,
   getPapersByCourse,
   deletePaper,
-  exportPaperPDF
+  exportPaperPDF,
+  getAllPapers,
+  downloadPaperById
 } = require('../controllers/generatorController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
@@ -40,5 +42,9 @@ router.get('/papers/course/:courseId', authorize('teacher'), getPapersByCourse);
 
 // Export PDF — TEACHER ONLY (only teachers can export their own papers)
 router.post('/export-pdf', authorize('teacher'), exportPaperPDF);
+
+// Examination Incharge Endpoints
+router.get('/papers', authorize('examination_incharge', 'hod', 'admin'), getAllPapers);
+router.get('/papers/:id/download', authorize('examination_incharge', 'hod', 'admin', 'teacher'), downloadPaperById);
 
 module.exports = router;
