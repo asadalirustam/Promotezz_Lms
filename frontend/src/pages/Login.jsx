@@ -170,7 +170,7 @@ const Login = () => {
 
           {/* Demo Presets */}
           <div className="mt-7 pt-6" style={{ borderTop: '1px solid #E2E8F0' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>Quick Demo Logins</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#64748B' }}>Quick Demo Logins</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {presets.map((p) => (
                 <button
@@ -182,7 +182,7 @@ const Login = () => {
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
                 >
                   <span className="font-bold block text-[10px]" style={{ color: p.color }}>{p.label}</span>
-                  <span className="block text-[8px] truncate" style={{ color: '#94A3B8' }}>{p.email}</span>
+                  <span className="block text-[8px] truncate" style={{ color: '#64748B' }}>{p.email}</span>
                 </button>
               ))}
             </div>

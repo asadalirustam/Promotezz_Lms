@@ -8,6 +8,8 @@ const QuizResult = require('../models/QuizResult');
 const Attendance = require('../models/Attendance');
 const Resource = require('../models/Resource');
 const GeneratedPaper = require('../models/GeneratedPaper');
+const FeeChallan = require('../models/FeeChallan');
+
 
 // @desc    Get dashboard statistics for Students
 // @route   GET /api/analytics/student
@@ -398,10 +400,34 @@ const getExamInchargeStats = async (req, res) => {
   }
 };
 
+const getAccountantStats = async (req, res) => {
+  try {
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const challans = await FeeChallan.find({});
+    
+    const paidAmount = challans.reduce((sum, c) => sum + (c.paidAmount || 0), 0);
+    const netPayable = challans.reduce((sum, c) => sum + (c.netPayable || 0), 0);
+    const pendingAmount = Math.max(0, netPayable - paidAmount);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalStudents,
+        totalRevenue: paidAmount,
+        pendingRevenue: pendingAmount,
+        totalChallans: challans.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getStudentStats,
   getTeacherStats,
   getHODStats,
   getAdminStats,
-  getExamInchargeStats
+  getExamInchargeStats,
+  getAccountantStats
 };

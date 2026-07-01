@@ -1,13 +1,25 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
-// @desc    Get all users
+// @desc    Get all users (Admin/HOD)
 // @route   GET /api/users
 // @access  Private (Admin/HOD)
 const getUsers = async (req, res) => {
   try {
     const users = await User.find({}).select('-password');
     res.status(200).json({ success: true, count: users.length, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get all users as contacts for chat (any authenticated user)
+// @route   GET /api/users/contacts
+// @access  Private (Any role)
+const getContacts = async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user._id } }).select('name email role department');
+    res.status(200).json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -120,6 +132,7 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getUsers,
   getTeachers,
+  getContacts,
   createUser,
   updateUser,
   deleteUser

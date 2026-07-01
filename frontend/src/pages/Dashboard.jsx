@@ -92,7 +92,7 @@ const Dashboard = () => {
               <BookOpen className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>Courses</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>Courses</p>
               <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{stats?.totalCourses || 0}</h3>
             </div>
           </div>
@@ -102,7 +102,7 @@ const Dashboard = () => {
               <Percent className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>Attendance</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>Attendance</p>
               <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{stats?.attendanceRate || 85}%</h3>
             </div>
           </div>
@@ -112,7 +112,7 @@ const Dashboard = () => {
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>Target GPA</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>Target GPA</p>
               <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{stats?.gpa || '3.50'}</h3>
             </div>
           </div>
@@ -122,7 +122,7 @@ const Dashboard = () => {
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>Submissions</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>Submissions</p>
               <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{stats?.completedSubmissions || 0}</h3>
             </div>
           </div>
@@ -147,13 +147,13 @@ const Dashboard = () => {
                   <div key={assign._id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4" style={{borderBottom:'1px solid #F1F5F9'}}>
                     <div>
                       <h4 className="font-semibold text-sm" style={{color:'#1E293B'}}>{assign.title}</h4>
-                      <p className="text-xs mt-1" style={{color:'#94A3B8'}}>{assign.course?.name} ({assign.course?.code})</p>
+                      <p className="text-xs mt-1" style={{color:'#64748B'}}>{assign.course?.name} ({assign.course?.code})</p>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="text-[11px] px-3 py-1 rounded-lg font-medium" style={{background:'#FEF2F2',border:'1px solid #FECACA',color:'#EF4444'}}>
                         Due: {new Date(assign.dueDate).toLocaleDateString()}
                       </span>
-                      <Link to={`/courses/${assign.course?._id}`} className="transition-all" style={{color:'#94A3B8'}}>
+                      <Link to={`/courses/${assign.course?._id}`} className="transition-all" style={{color:'#64748B'}}>
                         <ChevronRight className="w-5 h-5" />
                       </Link>
                     </div>
@@ -161,7 +161,7 @@ const Dashboard = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-center py-6" style={{color:'#94A3B8'}}>No upcoming assignments due. Great job!</p>
+              <p className="text-sm text-center py-6" style={{color:'#64748B'}}>No upcoming assignments due. Great job!</p>
             )}
           </div>
 
@@ -220,7 +220,7 @@ const Dashboard = () => {
             <div key={card.label} className="card-light glow-card-accent flex items-center gap-4 p-6">
               <div className="p-3 rounded-xl" style={{background:card.bg,color:card.color}}><I className="w-6 h-6" /></div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>{card.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>{card.label}</p>
                 <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{card.val}</h3>
               </div>
             </div>
@@ -236,7 +236,7 @@ const Dashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr className="text-xs uppercase tracking-wider" style={{color:'#94A3B8',borderBottom:'1px solid #E2E8F0'}}>
+                    <tr className="text-xs uppercase tracking-wider" style={{color:'#64748B',borderBottom:'1px solid #E2E8F0'}}>
                       <th className="pb-3 font-semibold">Student</th>
                       <th className="pb-3 font-semibold">Assignment</th>
                       <th className="pb-3 font-semibold">Submitted</th>
@@ -248,7 +248,7 @@ const Dashboard = () => {
                       <tr key={sub._id} style={{borderBottom:'1px solid #F1F5F9'}}>
                         <td className="py-3 font-medium" style={{color:'#1E293B'}}>{sub.student?.name}</td>
                         <td className="py-3" style={{color:'#64748B'}}>{sub.assignment?.title}</td>
-                        <td className="py-3" style={{color:'#94A3B8'}}>{new Date(sub.submittedAt).toLocaleDateString()}</td>
+                        <td className="py-3" style={{color:'#64748B'}}>{new Date(sub.submittedAt).toLocaleDateString()}</td>
                         <td className="py-3 text-right">
                           <Link
                             to={`/courses/${sub.assignment?.course}`}
@@ -265,7 +265,7 @@ const Dashboard = () => {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-center py-6" style={{color:'#94A3B8'}}>All submissions are graded! Great work.</p>
+              <p className="text-sm text-center py-6" style={{color:'#64748B'}}>All submissions are graded! Great work.</p>
             )}
           </div>
           <div className="card-light p-6 space-y-4">
@@ -313,7 +313,7 @@ const Dashboard = () => {
             <div key={card.label} className="card-light glow-card-accent flex items-center gap-4 p-6">
               <div className="p-3 rounded-xl" style={{background:card.bg,color:card.color}}><I className="w-6 h-6" /></div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>{card.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>{card.label}</p>
                 <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{card.val}</h3>
               </div>
             </div>
@@ -329,7 +329,7 @@ const Dashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr className="text-xs uppercase tracking-wider" style={{color:'#94A3B8',borderBottom:'1px solid #E2E8F0'}}>
+                    <tr className="text-xs uppercase tracking-wider" style={{color:'#64748B',borderBottom:'1px solid #E2E8F0'}}>
                       <th className="pb-3 font-semibold">Student</th><th className="pb-3 font-semibold">Email</th>
                       <th className="pb-3 font-semibold">Sem</th><th className="pb-3 font-semibold">GPA</th>
                       <th className="pb-3 font-semibold text-right">Attendance</th>
@@ -349,7 +349,7 @@ const Dashboard = () => {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-center py-6" style={{color:'#94A3B8'}}>All students are meeting target GPA & attendance. Outstanding!</p>
+              <p className="text-sm text-center py-6" style={{color:'#64748B'}}>All students are meeting target GPA & attendance. Outstanding!</p>
             )}
           </div>
           <div className="card-light p-6 space-y-4">
@@ -392,7 +392,7 @@ const Dashboard = () => {
             <div key={card.label} className="card-light glow-card-accent flex items-center gap-4 p-6">
               <div className="p-3 rounded-xl" style={{background:card.bg,color:card.color}}><I className="w-6 h-6" /></div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#94A3B8'}}>{card.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>{card.label}</p>
                 <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{card.val}</h3>
               </div>
             </div>
@@ -436,6 +436,101 @@ const Dashboard = () => {
                 </Link>
               );})}
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- EXAMINATION INCHARGE DASHBOARD VIEW ---
+  if (user?.role === 'examination_incharge') {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold" style={{color:'#1E293B'}}>Examination Incharge Dashboard</h1>
+          <p className="text-sm" style={{color:'#64748B'}}>Audit generated exam papers, review grade boundaries, and manage student grade sheets.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { label: 'Total Students', val: stats?.totalStudents || 0, icon: Users, bg: '#EFF6FF', color: '#2563EB' },
+            { label: 'Total Courses', val: stats?.totalCourses || 0, icon: BookOpen, bg: '#F5F3FF', color: '#7C3AED' },
+            { label: 'AI Generated Papers', val: stats?.totalExamPapers || 0, icon: FileText, bg: '#F0FDF4', color: '#22C55E' },
+          ].map(card => { const I = card.icon; return (
+            <div key={card.label} className="card-light glow-card-accent flex items-center gap-4 p-6">
+              <div className="p-3 rounded-xl" style={{background:card.bg,color:card.color}}><I className="w-6 h-6" /></div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>{card.label}</p>
+                <h3 className="text-2xl font-bold mt-1" style={{color:'#1E293B'}}>{card.val}</h3>
+              </div>
+            </div>
+          );})}
+        </div>
+        <div className="card-light p-6 space-y-6">
+          <h3 className="font-bold text-lg" style={{color:'#1E293B'}}>Quick Operations</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link to="/exam-incharge-panel"
+              className="flex items-center justify-between p-5 rounded-2xl transition-all"
+              style={{background:'#F5F3FF',border:'1px solid #DDD6FE'}}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow='0 6px 16px rgba(124,58,237,0.1)'}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-white text-[#7C3AED]"><FileText className="w-6 h-6" /></div>
+                <div>
+                  <span className="block text-base font-bold text-[#7C3AED]">Examination Control Panel</span>
+                  <span className="text-xs" style={{color:'#64748B'}}>Audit exam papers, download PDF worksheets, configure grade scale.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#7C3AED]" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- ACCOUNTANT DASHBOARD VIEW ---
+  if (user?.role === 'accountant') {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold" style={{color:'#1E293B'}}>Accountant Finance Dashboard</h1>
+          <p className="text-sm" style={{color:'#64748B'}}>ERP Finance control center, track student payments, scholarships, and university expenses.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Total Students', val: stats?.totalStudents || 0, icon: Users, bg: '#EFF6FF', color: '#2563EB' },
+            { label: 'Total Challans', val: stats?.totalChallans || 0, icon: FileText, bg: '#F5F3FF', color: '#7C3AED' },
+            { label: 'Total Revenue', val: `PKR ${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, bg: '#F0FDF4', color: '#22C55E' },
+            { label: 'Pending Dues', val: `PKR ${(stats?.pendingRevenue || 0).toLocaleString()}`, icon: AlertTriangle, bg: '#FEF2F2', border: '#FECACA', color: '#EF4444' },
+          ].map(card => { const I = card.icon; return (
+            <div key={card.label} className="card-light glow-card-accent flex items-center gap-4 p-6">
+              <div className="p-3 rounded-xl" style={{background:card.bg,color:card.color}}><I className="w-6 h-6" /></div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{color:'#64748B'}}>{card.label}</p>
+                <h3 className="text-xl font-bold mt-1" style={{color:'#1E293B'}}>{card.val}</h3>
+              </div>
+            </div>
+          );})}
+        </div>
+        <div className="card-light p-6 space-y-6">
+          <h3 className="font-bold text-lg" style={{color:'#1E293B'}}>Quick Operations</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link to="/accountant-panel"
+              className="flex items-center justify-between p-5 rounded-2xl transition-all"
+              style={{background:'#FFF7ED',border:'1px solid #FED7AA'}}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow='0 6px 16px rgba(234,88,12,0.1)'}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-white text-[#EA580C]"><BarChart3 className="w-6 h-6" /></div>
+                <div>
+                  <span className="block text-base font-bold text-[#EA580C]">Finance ERP Panel</span>
+                  <span className="text-xs" style={{color:'#64748B'}}>Manage fee structures, approve scholarships, collect fees, salary slips & expenses.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#EA580C]" />
+            </Link>
           </div>
         </div>
       </div>

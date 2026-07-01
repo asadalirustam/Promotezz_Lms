@@ -241,7 +241,7 @@ const AdminPanel = () => {
                 <Icon className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: '#94A3B8' }}>{card.label}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: '#64748B' }}>{card.label}</p>
                 <h3 className="text-2xl font-black mt-0.5" style={{ color: '#0F172A' }}>{card.value.toLocaleString()}</h3>
               </div>
             </div>
