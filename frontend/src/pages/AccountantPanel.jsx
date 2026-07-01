@@ -390,12 +390,13 @@ const ChallanPaymentsTab = () => {
       if (filterStatus) params.append('status', filterStatus);
       const [c, s, st] = await Promise.all([
         api.get(`/fees/challans?${params}`),
-        api.get('/users?role=student'),
+        api.get('/users/contacts'),
         api.get('/fees/structures')
       ]);
       setChallans(c.data.data || []);
       setTotal(c.data.total || 0);
-      setStudents(s.data.users || s.data.data || []);
+      const allUsers = s.data.data || [];
+      setStudents(allUsers.filter(u => u.role === 'student'));
       setStructures(st.data.data || []);
     } catch {}
     setLoading(false);
@@ -596,11 +597,12 @@ const ScholarshipsTab = () => {
     try {
       const [sc, dc, st] = await Promise.all([
         api.get('/scholarships'), api.get('/scholarships/discounts'),
-        api.get('/users?role=student')
+        api.get('/users/contacts')
       ]);
       setScholarships(sc.data.data || []);
       setDiscounts(dc.data.data || []);
-      setStudents(st.data.users || st.data.data || []);
+      const allUsers = st.data.data || [];
+      setStudents(allUsers.filter(u => u.role === 'student'));
     } catch {}
     setLoading(false);
   }, []);
@@ -912,9 +914,10 @@ const SalaryTab = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, e] = await Promise.all([api.get('/hr/salaries'), api.get('/users?role=teacher')]);
+      const [s, e] = await Promise.all([api.get('/hr/salaries'), api.get('/users/contacts')]);
       setSalaries(s.data.data || []);
-      setEmployees(e.data.users || e.data.data || []);
+      const allUsers = e.data.data || [];
+      setEmployees(allUsers.filter(u => u.role === 'teacher'));
     } catch {}
     setLoading(false);
   }, []);
