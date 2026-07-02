@@ -933,6 +933,14 @@ const SalaryTab = () => {
     } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Error')); }
     setSaving(false);
   };
+  const handlePaySalary = async (id) => {
+    if (!window.confirm('Mark this salary as paid?')) return;
+    try {
+      await api.put(`/hr/salaries/${id}`, { status: 'paid' });
+      load();
+    } catch {}
+  };
+
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -969,12 +977,21 @@ const SalaryTab = () => {
                     <td className="px-4 py-3 text-xs font-bold" style={{ color: C.success }}>{fmt(s.netSalary)}</td>
                     <td className="px-4 py-3">{badge(s.status)}</td>
                     <td className="px-4 py-3">
-                      <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/hr/salaries/${s._id}/slip`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white w-fit"
-                        style={{ background: C.primary }}>
-                        <Download className="w-3 h-3" /> PDF
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/hr/salaries/${s._id}/slip`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white w-fit"
+                          style={{ background: C.primary }}>
+                          <Download className="w-3 h-3" /> PDF
+                        </a>
+                        {s.status === 'pending' && (
+                          <button onClick={() => handlePaySalary(s._id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white hover:opacity-90 transition-all cursor-pointer"
+                            style={{ background: C.success }}>
+                            Mark Paid
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

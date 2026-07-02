@@ -19,7 +19,9 @@ import {
   Clock,
   MapPin,
   Eye,
-  X
+  X,
+  Sparkles,
+  Video
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -112,6 +114,13 @@ const CourseDetail = () => {
   const [loadingAIReport, setLoadingAIReport] = useState({});
   const [selectedSubForReport, setSelectedSubForReport] = useState(null);
   const [showAIReportModal, setShowAIReportModal] = useState(false);
+  // Online Lectures states
+  const [liveLectures, setLiveLectures] = useState([]);
+  const [showLectureModal, setShowLectureModal] = useState(false);
+  const [newLecture, setNewLecture] = useState({ topic: '', startTime: '', duration: 60 });
+  const [isSubmittingLecture, setIsSubmittingLecture] = useState(false);
+  const [lectureError, setLectureError] = useState('');
+  const [lectureBlockError, setLectureBlockError] = useState('');
 
   const fetchCourseDetails = async () => {
     try {
@@ -196,6 +205,9 @@ const CourseDetail = () => {
           const savedIds = savedRes.data.data.map(s => s._id);
           setSavedSummaries(savedIds);
         }
+      } else if (tab === 'live-lectures') {
+        const res = await api.get(`/live-lectures/course/${id}`);
+        setLiveLectures(res.data.data || []);
       }
     } catch (err) {
       console.error('Failed to load tab data', err);
@@ -564,6 +576,55 @@ const CourseDetail = () => {
     }
   };
 
+  // --- ONLINE LECTURES HANDLERS ---
+  const handleCreateLecture = async (e) => {
+    e.preventDefault();
+    setIsSubmittingLecture(true);
+    setLectureError('');
+    try {
+      const res = await api.post('/live-lectures', {
+        courseId: id,
+        ...newLecture
+      });
+      if (res.data.success) {
+        setShowLectureModal(false);
+        setNewLecture({ topic: '', startTime: '', duration: 60 });
+        loadTabContent('live-lectures');
+      }
+    } catch (err) {
+      setLectureError(err.response?.data?.message || 'Failed to schedule live lecture');
+    } finally {
+      setIsSubmittingLecture(false);
+    }
+  };
+
+  const handleUpdateLectureStatus = async (lectureId, newStatus) => {
+    try {
+      const res = await api.put(`/live-lectures/${lectureId}`, { status: newStatus });
+      if (res.data.success) {
+        loadTabContent('live-lectures');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update lecture status');
+    }
+  };
+
+  const handleJoinLecture = async (lectureId) => {
+    try {
+      const res = await api.post(`/live-lectures/${lectureId}/join`);
+      if (res.data.success) {
+        window.open(res.data.meetingLink, '_blank');
+        loadTabContent('live-lectures');
+      }
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setLectureBlockError(err.response.data.message || 'Access Denied.');
+      } else {
+        alert(err.response?.data?.message || 'Failed to join live lecture');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -627,7 +688,8 @@ const CourseDetail = () => {
           { id: 'attendance', label: 'Attendance', icon: CheckSquare },
           { id: 'timetable', label: 'Timetable', icon: Calendar },
           { id: 'exams', label: 'Exam Papers', icon: FileText },
-          { id: 'gradesheet', label: 'Sessional & Gradesheet', icon: Award }
+          { id: 'gradesheet', label: 'Sessional & Gradesheet', icon: Award },
+          { id: 'live-lectures', label: 'Online Lectures', icon: Video }
         ].map((t) => {
           const TabIcon = t.icon;
           return (
@@ -1848,6 +1910,141 @@ const CourseDetail = () => {
         </div>
       )}
 
+      {/* TAB 9: ONLINE LECTURES */}
+      {activeTab === 'live-lectures' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg">Online Live Lectures</h3>
+              <p className="text-xs text-slate-400 font-medium">Virtual classrooms with university domain email verification and automated attendance logs.</p>
+            </div>
+            {(user?.role === 'teacher' || user?.role === 'admin' || user?.role === 'hod') && (
+              <button
+                onClick={() => setShowLectureModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent-600 to-indigo-600 hover:from-accent-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl cursor-pointer transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Schedule Live Class</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {liveLectures.length > 0 ? (
+              liveLectures.map((lec) => {
+                const isLecActive = lec.status === 'active';
+                const isLecCompleted = lec.status === 'completed';
+                return (
+                  <div key={lec._id} className="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all glow-card-accent relative">
+                    {isLecActive && (
+                      <span className="absolute top-4 right-4 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                      </span>
+                    )}
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded border ${
+                          isLecActive
+                            ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                            : isLecCompleted
+                            ? 'bg-slate-800 border-slate-700 text-slate-400'
+                            : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                        }`}>
+                          {lec.status}
+                        </span>
+                        <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider bg-slate-950 px-2 py-0.5 rounded border border-slate-850">
+                          {lec.duration} Mins
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-base text-white">{lec.topic}</h4>
+                        <p className="text-xs text-slate-450 mt-1 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{new Date(lec.startTime).toLocaleString()}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Instructor: <span className="font-semibold text-slate-450">{lec.teacher?.name || 'Faculty'}</span>
+                        </p>
+                        {lec.joinedStudents && lec.joinedStudents.length > 0 && (
+                          <div className="mt-3 p-2 bg-slate-950/40 rounded-lg border border-slate-850/60">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                              Participants Logged ({lec.joinedStudents.length})
+                            </span>
+                            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                              {lec.joinedStudents.map((s, idx) => (
+                                <span key={idx} className="text-[8px] font-semibold bg-slate-900 border border-slate-800 text-slate-455 px-1.5 py-0.5 rounded">
+                                  {s.student?.name || 'Student'}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-800/60 pt-4 mt-6">
+                      <span className="text-[10px] text-slate-500">
+                        Created: {new Date(lec.createdAt).toLocaleDateString()}
+                      </span>
+                      
+                      <div className="flex items-center gap-2">
+                        {/* Teacher Controls */}
+                        {user?.role !== 'student' && !isLecCompleted && (
+                          <>
+                            {!isLecActive ? (
+                              <button
+                                onClick={() => handleUpdateLectureStatus(lec._id, 'active')}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg cursor-pointer transition-all"
+                              >
+                                Start Class
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleUpdateLectureStatus(lec._id, 'completed')}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg cursor-pointer transition-all"
+                              >
+                                End Class
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Student Join Button */}
+                        {user?.role === 'student' && isLecActive && (
+                          <button
+                            onClick={() => handleJoinLecture(lec._id)}
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-md shadow-emerald-500/10 flex items-center gap-1.5"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Join Live Class</span>
+                          </button>
+                        )}
+
+                        {/* Standard link indicator for scheduled states */}
+                        {lec.status === 'scheduled' && (
+                          <span className="text-[10px] text-slate-500 font-semibold italic">Class not started</span>
+                        )}
+
+                        {isLecCompleted && (
+                          <span className="text-[10px] text-slate-500 font-semibold italic">Class concluded</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full py-8 text-center text-slate-500 text-sm glass-panel border border-slate-800 rounded-2xl">
+                No scheduled online lectures found for this course.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* RESOURCE MODAL */}
       {showResourceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
@@ -2553,6 +2750,115 @@ const CourseDetail = () => {
               >
                 Close Guide
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* SCHEDULE LIVE LECTURE MODAL */}
+      {showLectureModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
+            <div className="flex items-center justify-between p-5 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white">Schedule Online Class</h3>
+              <button onClick={() => setShowLectureModal(false)} className="text-slate-400 hover:text-white transition-all cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateLecture} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase">Lecture Topic / Title</label>
+                <input
+                  type="text"
+                  required
+                  value={newLecture.topic}
+                  onChange={(e) => setNewLecture({ ...newLecture, topic: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                  placeholder="e.g. Introduction to Support Vector Machines"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase">Start Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={newLecture.startTime}
+                    onChange={(e) => setNewLecture({ ...newLecture, startTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase">Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    required
+                    value={newLecture.duration}
+                    onChange={(e) => setNewLecture({ ...newLecture, duration: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none focus:border-accent-500 text-white"
+                  />
+                </div>
+              </div>
+
+
+              {lectureError && (
+                <p className="text-xs text-rose-450 font-medium text-center">{lectureError}</p>
+              )}
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowLectureModal(false)}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLecture}
+                  className="px-4.5 py-2 bg-gradient-to-r from-accent-600 to-indigo-600 hover:from-accent-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {isSubmittingLecture ? 'Scheduling...' : 'Schedule Lecture'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ACCESS DENIED BLOCK WARNING MODAL */}
+      {lectureBlockError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-red-500/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative text-left">
+            <div className="h-1.5 w-full bg-red-500" />
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 text-red-400">
+                <ShieldCheck className="w-8 h-8 shrink-0" />
+                <div>
+                  <h3 className="text-base font-extrabold text-white">University Security Access Check</h3>
+                  <p className="text-[10px] text-red-400/80 font-bold uppercase tracking-wider">Verification Error</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-350 leading-relaxed font-medium">
+                {lectureBlockError}
+              </p>
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-1.5">
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Required Domain</p>
+                <p className="text-xs font-mono font-bold text-white">student_email@ailms.edu</p>
+                <p className="text-[10px] text-slate-450 leading-normal pt-1">
+                  University credentials are required to automatically log and secure your session attendance sheets.
+                </p>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setLectureBlockError('')}
+                  className="px-5 py-2 bg-red-650 hover:bg-red-600 text-white font-bold text-xs rounded-xl cursor-pointer transition-all shadow-md shadow-red-900/10"
+                >
+                  Acknowledge & Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

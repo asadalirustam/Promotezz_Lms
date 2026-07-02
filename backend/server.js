@@ -64,6 +64,8 @@ app.use('/api/accountant', require('./routes/accountantRoutes'));
 app.use('/api/fees', require('./routes/feeRoutes'));
 app.use('/api/scholarships', require('./routes/scholarshipRoutes'));
 app.use('/api/hr', require('./routes/expenseRoutes'));
+app.use('/api/live-lectures', require('./routes/liveLectureRoutes'));
+
 
 
 // Root route checking server status
