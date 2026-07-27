@@ -4,6 +4,15 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const dotenv = require('dotenv');
+const dns = require('dns');
+
+// Fix DNS resolution for MongoDB Atlas SRV connection strings on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore error if custom DNS cannot be set
+}
+
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
@@ -66,8 +75,6 @@ app.use('/api/scholarships', require('./routes/scholarshipRoutes'));
 app.use('/api/hr', require('./routes/expenseRoutes'));
 app.use('/api/live-lectures', require('./routes/liveLectureRoutes'));
 
-
-
 // Root route checking server status
 app.get('/', (req, res) => {
   res.json({ message: 'AI Department Learning Management System API is running successfully' });
@@ -82,11 +89,7 @@ const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections without killing server
 process.on('unhandledRejection', (err, promise) => {
   console.error(`Unhandled Rejection Error: ${err.message}`);
-  // Close server & exit process
-  server.close(() => process.exit(1));
 });
-
-// Trigger reload

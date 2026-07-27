@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Configure Google Public DNS to resolve MongoDB Atlas SRV records reliably on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore error if custom DNS cannot be set
+}
 
 const connectDB = async () => {
   try {
@@ -12,7 +20,6 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`Database Connection Error: ${error.message}`);
-    process.exit(1);
   }
 };
 

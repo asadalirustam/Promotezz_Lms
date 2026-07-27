@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const dns = require('dns');
+
+// Configure Google Public DNS for MongoDB Atlas SRV queries on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore error
+}
 
 // Load models
 const User = require('./models/User');
@@ -52,9 +60,16 @@ const seedData = async () => {
     // 2. Create Users
     const users = [
       {
+        name: 'Chief Executive Officer',
+        email: 'ceo@ailms.edu',
+        password: hashPassword('Asadali456'),
+        role: 'admin',
+        department: 'Executive Management'
+      },
+      {
         name: 'System Administrator',
         email: 'admin@ailms.edu',
-        password: hashPassword('admin123'),
+        password: hashPassword('asadali456'),
         role: 'admin',
         department: 'Artificial Intelligence'
       },
