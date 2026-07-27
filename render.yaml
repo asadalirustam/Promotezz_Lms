@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: promotezz-lms-backend
+    env: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        value: mongodb+srv://asadalirustam9_db_user:asadali456@cluster0.7ktiiem.mongodb.net/AI_LMS?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        value: ai_lms_secret_token_12345_abcde

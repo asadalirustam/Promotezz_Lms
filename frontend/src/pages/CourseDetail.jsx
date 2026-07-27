@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import api from '../services/api';
+import api, { SERVER_URL } from '../services/api';
 import {
   BookOpen,
   FileText,
@@ -749,7 +749,7 @@ const CourseDetail = () => {
                     <div className="pt-2">
                       {res.url.startsWith('/uploads/') ? (
                         <a
-                          href={`http://localhost:5000${res.url}`}
+                          href={`${SERVER_URL}${res.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs text-accent-400 font-semibold hover:text-accent-300 transition-all bg-accent-500/10 px-2.5 py-1 rounded-lg"
@@ -938,7 +938,7 @@ const CourseDetail = () => {
                           <>
                             <span>&bull;</span>
                             <a
-                              href={`http://localhost:5000${assign.fileUrl}`}
+                              href={`${SERVER_URL}${assign.fileUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-accent-400 hover:underline flex items-center gap-1"
@@ -1043,7 +1043,7 @@ const CourseDetail = () => {
                           <td className="py-4 font-semibold text-white">{sub.student?.name}</td>
                           <td className="py-4">
                             <a
-                              href={`http://localhost:5000${sub.fileUrl}`}
+                              href={`${SERVER_URL}${sub.fileUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-accent-400 hover:underline flex items-center gap-1 text-xs"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { SERVER_URL } from '../services/api';
 import {
   FolderOpen,
   Search,
@@ -146,7 +146,7 @@ const Resources = () => {
                 <div>
                   {res.url.startsWith('/uploads/') ? (
                     <a
-                      href={`http://localhost:5000${res.url}`}
+                      href={`${SERVER_URL}${res.url}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-accent-400 hover:text-accent-300 font-semibold transition-all"
