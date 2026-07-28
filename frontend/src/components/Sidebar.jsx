@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
+import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard,
   BookOpen,
@@ -18,14 +19,12 @@ import {
   Contact,
   Navigation,
   Shield,
-  DollarSign,
-  Receipt,
-  Award,
-  Briefcase
+  DollarSign
 } from 'lucide-react';
 
 const Sidebar = () => {
   const { user } = useSelector((state) => state.auth);
+  const { darkMode } = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -103,28 +102,28 @@ const Sidebar = () => {
   const links = getLinks();
 
   const roleBadge = {
-    student: { bg: '#DCFCE7', color: '#16A34A', border: '#86EFAC' },
-    teacher: { bg: '#DBEAFE', color: '#2563EB', border: '#93C5FD' },
-    hod:     { bg: '#FEF3C7', color: '#D97706', border: '#FCD34D' },
-    admin:   { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' },
-  examination_incharge: { bg: '#F5F3FF', color: '#7C3AED', border: '#DDD6FE' },
-    accountant: { bg: '#FFF7ED', color: '#EA580C', border: '#FED7AA' }
+    student: { bg: darkMode ? '#064E3B' : '#DCFCE7', color: darkMode ? '#34D399' : '#16A34A', border: darkMode ? '#059669' : '#86EFAC' },
+    teacher: { bg: darkMode ? '#1E3A8A' : '#DBEAFE', color: darkMode ? '#60A5FA' : '#2563EB', border: darkMode ? '#1D4ED8' : '#93C5FD' },
+    hod:     { bg: darkMode ? '#78350F' : '#FEF3C7', color: darkMode ? '#FBBF24' : '#D97706', border: darkMode ? '#B45309' : '#FCD34D' },
+    admin:   { bg: darkMode ? '#7F1D1D' : '#FEE2E2', color: darkMode ? '#F87171' : '#DC2626', border: darkMode ? '#B91C1C' : '#FCA5A5' },
+    examination_incharge: { bg: darkMode ? '#4C1D95' : '#F5F3FF', color: darkMode ? '#A78BFA' : '#7C3AED', border: darkMode ? '#6D28D9' : '#DDD6FE' },
+    accountant: { bg: darkMode ? '#7C2D12' : '#FFF7ED', color: darkMode ? '#FB923C' : '#EA580C', border: darkMode ? '#C2410C' : '#FED7AA' }
   };
   const rb = roleBadge[user?.role] || roleBadge.teacher;
 
   return (
     <aside
-      className="w-64 flex flex-col h-full shrink-0"
+      className="w-64 flex flex-col h-full shrink-0 transition-colors duration-200"
       style={{
-        background: '#FFFFFF',
-        borderRight: '1px solid #E2E8F0',
+        background: darkMode ? '#0F172A' : '#FFFFFF',
+        borderRight: darkMode ? '1px solid #1E293B' : '1px solid #E2E8F0',
         boxShadow: '2px 0 16px rgba(37,99,235,0.06)'
       }}
     >
       {/* Brand Header */}
       <div
         className="h-16 flex items-center px-5 gap-3"
-        style={{ borderBottom: '1px solid #E2E8F0' }}
+        style={{ borderBottom: darkMode ? '1px solid #1E293B' : '1px solid #E2E8F0' }}
       >
         <div
           className="p-2 rounded-xl flex items-center justify-center text-white shadow-md"
@@ -133,7 +132,7 @@ const Sidebar = () => {
           <Cpu className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="font-extrabold text-sm leading-tight tracking-tight" style={{ color: '#0F172A' }}>AI Department</h1>
+          <h1 className="font-extrabold text-sm leading-tight tracking-tight" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>AI Department</h1>
           <p className="text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5" style={{ color: '#2563EB' }}>LMS Portal</p>
         </div>
       </div>
@@ -141,7 +140,10 @@ const Sidebar = () => {
       {/* User Info Card */}
       <div
         className="mx-4 mt-4 mb-2 p-4 rounded-2xl"
-        style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}
+        style={{
+          background: darkMode ? '#1E293B' : '#EFF6FF',
+          border: darkMode ? '1px solid #334155' : '1px solid #BFDBFE'
+        }}
       >
         <div className="flex items-center gap-3">
           <div
@@ -151,7 +153,7 @@ const Sidebar = () => {
             {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="overflow-hidden">
-            <h4 className="font-bold text-sm truncate" style={{ color: '#0F172A' }}>{user?.name || 'User'}</h4>
+            <h4 className="font-bold text-sm truncate" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>{user?.name || 'User'}</h4>
             <span
               className="text-[9px] font-bold capitalize px-2 py-0.5 rounded-full border"
               style={{ background: rb.bg, color: rb.color, borderColor: rb.border }}
@@ -164,7 +166,7 @@ const Sidebar = () => {
 
       {/* Nav Links */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        <p className="text-[9px] font-bold uppercase tracking-[0.15em] px-3 pb-2" style={{ color: '#94A3B8' }}>Navigation</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.15em] px-3 pb-2" style={{ color: darkMode ? '#64748B' : '#94A3B8' }}>Navigation</p>
         {links.map((link) => {
           const IconComp = link.icon;
           return (
@@ -173,24 +175,24 @@ const Sidebar = () => {
               to={link.path}
               className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
               style={({ isActive }) => isActive ? {
-                background: '#EFF6FF',
+                background: darkMode ? '#1E293B' : '#EFF6FF',
                 color: '#2563EB',
-                border: '1px solid #BFDBFE',
+                border: darkMode ? '1px solid #3B82F6' : '1px solid #BFDBFE',
                 boxShadow: '0 2px 8px rgba(37,99,235,0.10)'
               } : {
-                color: '#64748B',
+                color: darkMode ? '#94A3B8' : '#475569',
                 border: '1px solid transparent'
               }}
               onMouseEnter={e => {
-                if (!e.currentTarget.style.background.includes('EFF6FF')) {
-                  e.currentTarget.style.background = '#F8FAFC';
-                  e.currentTarget.style.color = '#0F172A';
+                if (!e.currentTarget.style.background.includes('EFF6FF') && !e.currentTarget.style.background.includes('1E293B')) {
+                  e.currentTarget.style.background = darkMode ? '#1E293B' : '#F8FAFC';
+                  e.currentTarget.style.color = darkMode ? '#F8FAFC' : '#0F172A';
                 }
               }}
               onMouseLeave={e => {
-                if (!e.currentTarget.style.background.includes('EFF6FF')) {
+                if (!e.currentTarget.style.background.includes('EFF6FF') && !e.currentTarget.style.background.includes('1E293B')) {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#64748B';
+                  e.currentTarget.style.color = darkMode ? '#94A3B8' : '#475569';
                 }
               }}
             >
