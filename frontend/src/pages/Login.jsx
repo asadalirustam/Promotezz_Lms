@@ -47,7 +47,25 @@ const Login = () => {
     { label: 'Student', email: 'alex@ailms.edu',     pass: 'student123',  color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' }
   ];
 
-  const handleApplyPreset = (p) => { setEmail(p.email); setPassword(p.pass); setErrorMessage(''); };
+  const handleInstantLogin = async (preset) => {
+    const targetEmail = preset ? preset.email : 'admin@ailms.edu';
+    const targetPass = preset ? preset.pass : 'asadali456';
+    setEmail(targetEmail);
+    setPassword(targetPass);
+    setErrorMessage('');
+    try {
+      dispatch(loginStart());
+      const response = await api.post('/auth/login', { email: targetEmail, password: targetPass });
+      if (response.data.success) {
+        dispatch(loginSuccess({ user: response.data.data, token: response.data.data.token }));
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Invalid email or password';
+      dispatch(loginFailure(msg));
+      setErrorMessage(msg);
+    }
+  };
 
   return (
     <div
@@ -81,7 +99,6 @@ const Login = () => {
       </div>
 
       {/* Ambient blobs */}
-      {/* Ambient blobs */}
       <div
         className="absolute top-1/4 left-1/4 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full pointer-events-none opacity-70 sm:opacity-100"
         style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)' }}
@@ -103,22 +120,36 @@ const Login = () => {
           >
             <Cpu className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
           </div>
-          <h1 className="brand-title text-xl sm:text-2xl font-bold tracking-wide" style={{ color: '#0F172A' }}>
+          <h1 className="brand-title text-xl sm:text-2xl font-bold tracking-wide" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>
             Artificial Intelligence Dept
           </h1>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: '#64748B' }}>Learning Management System</p>
+          <p className="text-xs sm:text-sm mt-1" style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Learning Management System</p>
         </div>
 
         {/* Login Card */}
         <div
           className="login-card rounded-2xl p-6 sm:p-8 smooth-fast-transition"
           style={{
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 20px 60px rgba(37,99,235,0.10)'
+            background: darkMode ? '#1E293B' : '#FFFFFF',
+            border: darkMode ? '1px solid #334155' : '1px solid #E2E8F0',
+            boxShadow: darkMode ? '0 20px 60px rgba(0,0,0,0.40)' : '0 20px 60px rgba(37,99,235,0.10)'
           }}
         >
-          <h2 className="text-lg sm:text-xl font-semibold mb-5 sm:mb-6" style={{ color: '#0F172A' }}>Account Login</h2>
+          <div className="flex items-center justify-between mb-5 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>Account Login</h2>
+            {/* Quick Demo One-Click Badge */}
+            <button
+              onClick={() => handleInstantLogin(presets[0])}
+              className="text-[11px] font-extrabold px-3 py-1.5 rounded-full flex items-center gap-1.5 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
+              style={{
+                background: 'linear-gradient(135deg, #7C3AED, #2563EB)',
+                color: '#FFFFFF'
+              }}
+              title="One-Click Quick Admin Demo Login"
+            >
+              <span>⚡ Quick Demo</span>
+            </button>
+          </div>
 
           {errorMessage && (
             <div
@@ -145,12 +176,10 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none smooth-fast-transition"
                   style={{
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    color: '#0F172A'
+                    background: darkMode ? '#0F172A' : '#F8FAFC',
+                    border: darkMode ? '1px solid #334155' : '1px solid #E2E8F0',
+                    color: darkMode ? '#F8FAFC' : '#0F172A'
                   }}
-                  onFocus={e => { e.target.style.borderColor = '#2563EB'; e.target.style.background = '#EFF6FF'; }}
-                  onBlur={e => { e.target.style.borderColor = '#E2E8F0'; e.target.style.background = '#F8FAFC'; }}
                   placeholder="name@ailms.edu"
                 />
               </div>
@@ -170,12 +199,10 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none smooth-fast-transition"
                   style={{
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    color: '#0F172A'
+                    background: darkMode ? '#0F172A' : '#F8FAFC',
+                    border: darkMode ? '1px solid #334155' : '1px solid #E2E8F0',
+                    color: darkMode ? '#F8FAFC' : '#0F172A'
                   }}
-                  onFocus={e => { e.target.style.borderColor = '#2563EB'; e.target.style.background = '#EFF6FF'; }}
-                  onBlur={e => { e.target.style.borderColor = '#E2E8F0'; e.target.style.background = '#F8FAFC'; }}
                   placeholder="••••••••"
                 />
               </div>
@@ -198,24 +225,32 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Demo Presets */}
-          <div className="mt-6 sm:mt-7 pt-5 sm:pt-6" style={{ borderTop: '1px solid #E2E8F0' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 sm:mb-3" style={{ color: '#64748B' }}>
-              Quick Demo Logins
-            </p>
+          {/* Quick Demo Logins Section */}
+          <div className="mt-6 sm:mt-7 pt-5 sm:pt-6" style={{ borderTop: darkMode ? '1px solid #334155' : '1px solid #E2E8F0' }}>
+            <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>
+                🚀 Quick Demo Roles (1-Click Login)
+              </p>
+              <span className="text-[9px] font-semibold text-primary">Click any role to log in</span>
+            </div>
+
             <div className="preset-grid grid grid-cols-2 sm:grid-cols-3 gap-2">
               {presets.map((p) => (
                 <button
                   key={p.label}
-                  onClick={() => handleApplyPreset(p)}
-                  className="preset-btn px-2.5 sm:px-3 py-2 text-[11px] font-medium rounded-lg smooth-fast-transition text-left cursor-pointer active:scale-95"
-                  style={{ background: p.bg, border: `1px solid ${p.border}` }}
-                  onMouseEnter={e => e.currentTarget.style.boxShadow = `0 4px 12px ${p.color}22`}
+                  onClick={() => handleInstantLogin(p)}
+                  className="preset-btn px-2.5 sm:px-3 py-2 text-[11px] font-medium rounded-xl smooth-fast-transition text-left cursor-pointer active:scale-95 hover:scale-[1.03]"
+                  style={{
+                    background: darkMode ? '#0F172A' : p.bg,
+                    border: `1px solid ${darkMode ? '#334155' : p.border}`
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = `0 4px 14px ${p.color}33`}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  title={`1-Click Login as ${p.label}`}
                 >
-                  <span className="font-bold block text-[10px]" style={{ color: p.color }}>{p.label}</span>
-                  <span className="block text-[8px] truncate" style={{ color: '#64748B' }}>{p.email}</span>
-                  <span className="block text-[8px] font-mono font-semibold" style={{ color: p.color }}>Pass: {p.pass}</span>
+                  <span className="font-extrabold block text-[11px]" style={{ color: p.color }}>{p.label}</span>
+                  <span className="block text-[8px] truncate mt-0.5" style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>{p.email}</span>
+                  <span className="block text-[8px] font-mono font-bold mt-0.5" style={{ color: p.color }}>Pass: {p.pass}</span>
                 </button>
               ))}
             </div>
