@@ -22,13 +22,14 @@ import {
   DollarSign
 } from 'lucide-react';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileMenuOpen, closeMobileMenu }) => {
   const { user } = useSelector((state) => state.auth);
   const { darkMode } = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    if (closeMobileMenu) closeMobileMenu();
     dispatch(logout());
     navigate('/login');
   };
@@ -113,7 +114,12 @@ const Sidebar = () => {
 
   return (
     <aside
-      className="w-64 flex flex-col h-full shrink-0 transition-colors duration-200"
+      className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-72 lg:w-64 flex flex-col h-full shrink-0
+        transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) fast-gpu
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}
       style={{
         background: darkMode ? '#0F172A' : '#FFFFFF',
         borderRight: darkMode ? '1px solid #1E293B' : '1px solid #E2E8F0',
@@ -122,24 +128,35 @@ const Sidebar = () => {
     >
       {/* Brand Header */}
       <div
-        className="h-16 flex items-center px-5 gap-3"
+        className="h-16 flex items-center justify-between px-5 gap-3 shrink-0"
         style={{ borderBottom: darkMode ? '1px solid #1E293B' : '1px solid #E2E8F0' }}
       >
-        <div
-          className="p-2 rounded-xl flex items-center justify-center text-white shadow-md"
-          style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)' }}
+        <div className="flex items-center gap-3">
+          <div
+            className="p-2 rounded-xl flex items-center justify-center text-white shadow-md"
+            style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)' }}
+          >
+            <Cpu className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-extrabold text-sm leading-tight tracking-tight" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>AI Department</h1>
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5" style={{ color: '#2563EB' }}>LMS Portal</p>
+          </div>
+        </div>
+
+        {/* Mobile Close Button */}
+        <button
+          onClick={closeMobileMenu}
+          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          aria-label="Close sidebar"
         >
-          <Cpu className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="font-extrabold text-sm leading-tight tracking-tight" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>AI Department</h1>
-          <p className="text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5" style={{ color: '#2563EB' }}>LMS Portal</p>
-        </div>
+          <LogOut className="w-4 h-4 rotate-180" />
+        </button>
       </div>
 
       {/* User Info Card */}
       <div
-        className="mx-4 mt-4 mb-2 p-4 rounded-2xl"
+        className="mx-4 mt-4 mb-2 p-3.5 sm:p-4 rounded-2xl shrink-0"
         style={{
           background: darkMode ? '#1E293B' : '#EFF6FF',
           border: darkMode ? '1px solid #334155' : '1px solid #BFDBFE'
@@ -155,7 +172,7 @@ const Sidebar = () => {
           <div className="overflow-hidden">
             <h4 className="font-bold text-sm truncate" style={{ color: darkMode ? '#F8FAFC' : '#0F172A' }}>{user?.name || 'User'}</h4>
             <span
-              className="text-[9px] font-bold capitalize px-2 py-0.5 rounded-full border"
+              className="text-[9px] font-bold capitalize px-2 py-0.5 rounded-full border inline-block"
               style={{ background: rb.bg, color: rb.color, borderColor: rb.border }}
             >
               {user?.role}
@@ -165,7 +182,7 @@ const Sidebar = () => {
       </div>
 
       {/* Nav Links */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overflow-touch-scroll">
         <p className="text-[9px] font-bold uppercase tracking-[0.15em] px-3 pb-2" style={{ color: darkMode ? '#64748B' : '#94A3B8' }}>Navigation</p>
         {links.map((link) => {
           const IconComp = link.icon;
@@ -173,6 +190,9 @@ const Sidebar = () => {
             <NavLink
               key={link.path}
               to={link.path}
+              onClick={() => {
+                if (closeMobileMenu) closeMobileMenu();
+              }}
               className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
               style={({ isActive }) => isActive ? {
                 background: darkMode ? '#1E293B' : '#EFF6FF',
@@ -205,7 +225,7 @@ const Sidebar = () => {
                   <span>{link.name}</span>
                   {isActive && (
                     <div
-                      className="ml-auto w-1.5 h-1.5 rounded-full"
+                      className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
                       style={{ background: '#2563EB' }}
                     />
                   )}
@@ -217,12 +237,12 @@ const Sidebar = () => {
       </nav>
 
       {/* Footer / Logout */}
-      <div className="p-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+      <div className="p-3 shrink-0" style={{ borderTop: darkMode ? '1px solid #1E293B' : '1px solid #E2E8F0' }}>
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
           style={{ color: '#EF4444', border: '1px solid transparent' }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = '#FECACA'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = darkMode ? '#451A1A' : '#FEF2F2'; e.currentTarget.style.borderColor = darkMode ? '#7F1D1D' : '#FECACA'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
         >
           <LogOut className="w-4 h-4 shrink-0" />

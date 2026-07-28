@@ -9,6 +9,9 @@ const DashboardLayout = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   
+  // Mobile Sidebar Drawer state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Voice Assistant states
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -130,20 +133,35 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden relative" style={{ background: '#F8FAFC', color: '#0F172A' }}>
+    <div className="flex h-screen w-screen overflow-hidden relative fast-gpu" style={{ background: '#F8FAFC', color: '#0F172A' }}>
+      {/* Mobile Drawer Overlay Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden transition-opacity duration-300"
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <Sidebar />
+      <Sidebar
+        isMobileMenuOpen={isMobileMenuOpen}
+        closeMobileMenu={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* Main Content Pane */}
-      <div className="flex flex-col flex-1 h-full min-w-0 relative">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-8 relative" style={{ background: '#F8FAFC' }}>
+      <div className="flex flex-col flex-1 h-full min-w-0 relative overflow-hidden">
+        <Navbar
+          isMobileMenuOpen={isMobileMenuOpen}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 relative overflow-touch-scroll" style={{ background: '#F8FAFC' }}>
           <Outlet />
         </main>
       </div>
 
       {/* Voice Assistant Floating MIC Button */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
+      <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
         {/* Tooltip Overlay */}
         {(assistantMsg || transcript) && (
           <div className="pointer-events-auto bg-slate-900 border border-slate-800 text-white p-3.5 rounded-2xl shadow-xl max-w-xs text-xs space-y-1 animate-scale flex flex-col">
@@ -161,14 +179,14 @@ const DashboardLayout = () => {
 
         <button
           onClick={toggleListening}
-          className={`pointer-events-auto p-4 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ${
+          className={`pointer-events-auto p-3.5 sm:p-4 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ${
             isListening
               ? 'bg-danger text-white animate-pulse shadow-danger/25'
               : 'bg-primary text-white shadow-primary/25 hover:bg-primary-hover'
           }`}
           title="Talk to AI Voice Assistant"
         >
-          {isListening ? <Mic className="w-5.5 h-5.5" /> : <MicOff className="w-5.5 h-5.5" />}
+          {isListening ? <Mic className="w-5 h-5 sm:w-5.5 sm:h-5.5" /> : <MicOff className="w-5 h-5 sm:w-5.5 sm:h-5.5" />}
         </button>
       </div>
     </div>

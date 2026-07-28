@@ -86,7 +86,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="card-light glow-card-accent flex items-center gap-4 p-6">
             <div className="p-3 rounded-xl" style={{background:'#EFF6FF',color:'#2563EB'}}>
               <BookOpen className="w-6 h-6" />
@@ -210,7 +210,7 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold" style={{color:'#1E293B'}}>Teacher Dashboard</h1>
           <p className="text-sm" style={{color:'#64748B'}}>Coordinate courses, mark classroom roll counts, and review submissions.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
             { label:'Active Courses', val:stats?.totalCourses||0, icon:BookOpen, bg:'#EFF6FF', color:'#2563EB' },
             { label:'Students Enrolled', val:stats?.totalStudents||0, icon:Users, bg:'#F5F3FF', color:'#7C3AED' },
